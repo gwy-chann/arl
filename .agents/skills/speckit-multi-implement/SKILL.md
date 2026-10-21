@@ -31,7 +31,7 @@ flowchart TD
 ### The 4 Cardinal Rules
 1. **Never Implement Blocked Tickets**: If a ticket has any unresolved dependency (`is blocked by`, `depends on`, or unfinished prerequisite in the batch) or is flagged as blocked, **do not implement it**. Record the blocker, skip worktree creation, and proceed to unblocked tickets.
 2. **Worktree Isolation per Subagent**: Every subagent MUST operate strictly within its own isolated Git worktree (`.worktrees/<JIRA-KEY>`). Subagents must never work directly in the primary repository root.
-3. **Trigger Existing `speckit-workflow`**: Subagents must explicitly invoke and execute the project's canonical `speckit-workflow` ([SKILL.md](file:///c:/Users/Roselle%20Tabuena/workspace/swift/swift/.agents/skills/speckit-workflow/SKILL.md)), ensuring the full 8-artifact deliverable gate and TDD implementation.
+3. **Trigger Existing `speckit-workflow`**: Subagents must explicitly invoke and execute the project's canonical `speckit-workflow` ([SKILL.md](file:///c:/Users/Roselle%20Tabuena/workspace/arl/.agents/skills/speckit-workflow/SKILL.md)), ensuring the full 8-artifact deliverable gate and TDD implementation.
 4. **Automated Pull Request (PR)**: Upon successful verification, a standardized PR must be opened using GitHub CLI (`gh pr create`) adhering to the `create-pr` skill before the worktree is cleaned up.
 
 ---
@@ -97,7 +97,7 @@ For each runnable, unblocked ticket:
    git worktree add .worktrees/<JIRA-KEY> -b <branch-name> origin/main
    ```
    *(Note: `.worktrees/` is git-ignored, preventing untracked file clutter).*
-4. Verify the worktree path exists: `c:/Users/Roselle Tabuena/workspace/swift/swift/.worktrees/<JIRA-KEY>`.
+4. Verify the worktree path exists: `c:/Users/Roselle Tabuena/workspace/arl/.worktrees/<JIRA-KEY>`.
 
 ---
 

@@ -22,7 +22,7 @@ When the user asks broad, exploratory, or relational questions:
 
 👉 **Action**:
 1. Check if `graphify-out/graph.json` exists.
-2. If it exists, immediately query: `graphify query "<user question>"` (or read [graphify-out/GRAPH_REPORT.md](file:///c:/Users/Roselle%20Tabuena/workspace/swift/swift/graphify-out/GRAPH_REPORT.md)).
+2. If it exists, immediately query: `graphify query "<user question>"` (or read [graphify-out/GRAPH_REPORT.md](file:///c:/Users/Roselle%20Tabuena/workspace/arl/graphify-out/GRAPH_REPORT.md)).
 3. If not built yet, run `/graphify .` first.
 
 ---
@@ -78,4 +78,4 @@ Do **not** trigger a graph build or query when:
 
 1. **Prioritize Existing Graph**: Always check `graphify-out/graph.json` before running expensive filesystem greps across large repos.
 2. **Surface God Nodes**: When refactoring, warn the user if a target file is listed in the top God Nodes in `GRAPH_REPORT.md`.
-3. **Keep Visualizer Accessible**: Point users to [graphify-out/graph.html](file:///c:/Users/Roselle%20Tabuena/workspace/swift/swift/graphify-out/graph.html) when they ask for a visual architecture overview.
+3. **Keep Visualizer Accessible**: Point users to [graphify-out/graph.html](file:///c:/Users/Roselle%20Tabuena/workspace/arl/graphify-out/graph.html) when they ask for a visual architecture overview.

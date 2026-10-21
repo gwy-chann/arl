@@ -255,7 +255,7 @@ Whenever `/create-pr` is executed or a PR is opened:
 ## 🏁 Post-Merge Transition to "Done" (`merge-pr` Skill)
 
 Once the Pull Request is merged into `main` (either through GitHub web UI or `gh pr merge`):
-- Run `/merge-pr` or trigger the **`merge-pr`** skill ([SKILL.md](file:///c:/Users/Roselle%20Tabuena/workspace/swift/swift/.agents/skills/merge-pr/SKILL.md)).
+- Run `/merge-pr` or trigger the **`merge-pr`** skill ([SKILL.md](file:///c:/Users/Roselle%20Tabuena/workspace/arl/.agents/skills/merge-pr/SKILL.md)).
 - The `merge-pr` skill automatically:
   1. Detects PR merge state (`gh pr view --json state`).
   2. Transitions the linked Jira issue to **"Done"** via `transitionJiraIssue`.

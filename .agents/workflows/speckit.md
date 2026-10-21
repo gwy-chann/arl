@@ -18,7 +18,7 @@ Run the full SpecKit development pipeline for a feature request.
      git worktree add .worktrees/<JIRA-KEY-or-slug> -b feat/<JIRA-KEY-or-slug> origin/main
      ```
    - All subsequent phases, commands, edits, and artifact generations MUST execute inside `.worktrees/<JIRA-KEY-or-slug>`.
-4. Activate and execute the `speckit-workflow` skill ([SKILL.md](file:///c:/Users/Roselle%20Tabuena/workspace/swift/swift/.agents/skills/speckit-workflow/SKILL.md)).
+4. Activate and execute the `speckit-workflow` skill ([SKILL.md](file:///c:/Users/Roselle%20Tabuena/workspace/arl/.agents/skills/speckit-workflow/SKILL.md)).
 5. Follow the progressive phases:
    - **Phase 0: Worktree & Branch Provisioning**
    - **Phase 1: Specify** (`speckit-specify`)

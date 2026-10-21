@@ -10,7 +10,7 @@ Complete the post-merge phase of the feature lifecycle by synchronizing Jira, up
 
 1. If arguments are provided (`$ARGUMENTS`), treat them as the PR number or Jira issue key.
 2. If no arguments are provided, inspect the current branch's PR status using `gh pr view --json number,title,state,headRefName,url`.
-3. Activate and execute the **`merge-pr`** skill ([SKILL.md](file:///c:/Users/Roselle%20Tabuena/workspace/swift/swift/.agents/skills/merge-pr/SKILL.md)).
+3. Activate and execute the **`merge-pr`** skill ([SKILL.md](file:///c:/Users/Roselle%20Tabuena/workspace/arl/.agents/skills/merge-pr/SKILL.md)).
 4. Steps:
    - **Step 1**: Confirm the PR is merged into `main` (or run `gh pr merge <PR#> --merge`).
    - **Step 2**: Extract the linked Jira key (`[SIAA-XX]`).
