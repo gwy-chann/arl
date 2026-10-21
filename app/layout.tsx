@@ -22,7 +22,11 @@ export const metadata: Metadata = {
     "ARLQ Food Condiments Trading: inventory monitoring and sales system for toyo, suka and patis.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html
       lang="en"
