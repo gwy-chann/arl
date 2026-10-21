@@ -1,26 +1,257 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --bg-base: #F7F7F4;
+  --bg-surface: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #FFFFFF;
+  --bg-input: #FFFFFF;
+  --bg-hover: #FAFAF8;
+  --bg-muted: #FAFAF8;
+
+  /* Text */
+  --text-primary: #1F2933;
+  --text-secondary: #3E4A56;
+  --text-muted: #6B7280;
+  --text-light: #FFFFFF;
+
+  /* Brand / Action */
+  --primary: #095B06;
+  --primary-hover: #0B6E07;
+  --primary-light: #EAF2E8;
+  --primary-border: #095B06;
+  --secondary: #FFFFFF;
+  --secondary-hover: #FAFAF8;
+
+  /* Feedback / Status */
+  --success: #095B06;
+  --success-light: #EAF2E8;
+  --accent: #B45309;
+  --accent-light: #FEF3C7;
+  --danger: #B42318;
+  --danger-light: #FDECEA;
+  --info: #475569;
+  --info-light: #EEF2F6;
+
+  /* Status Borders */
+  --success-border: #C8DFC5;
+  --accent-border: #FCE69B;
+  --danger-border: #F8C9C4;
+  --info-border: #D7DFE8;
+
+  /* Borders */
+  --border: #E4E4DF;
+  --border-subtle: #CFCFC8;
+  --border-focus: #095B06;
+
+  /* Mockup Direct Variable Mappings & Backwards-Compatibility */
+  --brand: var(--primary);
+  --brand-h: var(--primary-hover);
+  --brand-act: #074A05;
+  --brand-soft: var(--primary-light);
+  --bg: var(--bg-base);
+  --surface: var(--bg-surface);
+  --sunken: var(--bg-muted);
+  --line: var(--border);
+  --line-2: var(--border-subtle);
+  --ink: var(--text-primary);
+  --ink-2: var(--text-secondary);
+  --muted: var(--text-muted);
+  --r: 6px;
+  --sidebar: 260px;
+
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark,
+[data-theme="dark"] {
+  /* Surfaces */
+  --bg-base: #111827;
+  --bg-surface: #1F2937;
+  --bg-card: #1F2937;
+  --bg-sidebar: #1F2937;
+  --bg-input: #111827;
+  --bg-hover: #283548;
+  --bg-muted: #16202E;
+
+  /* Text */
+  --text-primary: #FFFFFF;
+  --text-secondary: #E5E7EB;
+  --text-muted: #9CA3AF;
+  --text-light: #FFFFFF;
+
+  /* Brand / Action */
+  --primary: #22C55E;
+  --primary-hover: #4ADE80;
+  --primary-light: rgba(34, 197, 94, 0.18);
+  --primary-border: #4ADE80;
+  --secondary: #374151;
+  --secondary-hover: #4B5563;
+
+  /* Feedback / Status */
+  --success: #4ADE80;
+  --success-light: rgba(34, 197, 94, 0.22);
+  --accent: #FBBF24;
+  --accent-light: rgba(245, 158, 11, 0.22);
+  --danger: #F87171;
+  --danger-light: rgba(239, 68, 68, 0.22);
+  --info: #9CA3AF;
+  --info-light: rgba(156, 163, 175, 0.20);
+
+  /* Status Borders */
+  --success-border: rgba(34, 197, 94, 0.45);
+  --accent-border: rgba(245, 158, 11, 0.45);
+  --danger-border: rgba(239, 68, 68, 0.45);
+  --info-border: rgba(156, 163, 175, 0.40);
+
+  /* Borders */
+  --border: #374151;
+  --border-subtle: #4B5563;
+  --border-focus: #22C55E;
+
+  /* Mockup Direct Variable Mappings & Backwards-Compatibility */
+  --brand: var(--primary);
+  --brand-h: var(--primary-hover);
+  --brand-act: #16A34A;
+  --brand-soft: var(--primary-light);
+  --bg: var(--bg-base);
+  --surface: var(--bg-surface);
+  --sunken: var(--bg-muted);
+  --line: var(--border);
+  --line-2: var(--border-subtle);
+  --ink: var(--text-primary);
+  --ink-2: var(--text-secondary);
+  --muted: var(--text-muted);
+
+  color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    /* Surfaces */
+    --bg-base: #111827;
+    --bg-surface: #1F2937;
+    --bg-card: #1F2937;
+    --bg-sidebar: #1F2937;
+    --bg-input: #111827;
+    --bg-hover: #283548;
+    --bg-muted: #16202E;
+
+    /* Text */
+    --text-primary: #FFFFFF;
+    --text-secondary: #E5E7EB;
+    --text-muted: #9CA3AF;
+    --text-light: #FFFFFF;
+
+    /* Brand / Action */
+    --primary: #22C55E;
+    --primary-hover: #4ADE80;
+    --primary-light: rgba(34, 197, 94, 0.18);
+    --primary-border: #4ADE80;
+    --secondary: #374151;
+    --secondary-hover: #4B5563;
+
+    /* Feedback / Status */
+    --success: #4ADE80;
+    --success-light: rgba(34, 197, 94, 0.22);
+    --accent: #FBBF24;
+    --accent-light: rgba(245, 158, 11, 0.22);
+    --danger: #F87171;
+    --danger-light: rgba(239, 68, 68, 0.22);
+    --info: #9CA3AF;
+    --info-light: rgba(156, 163, 175, 0.20);
+
+    /* Status Borders */
+    --success-border: rgba(34, 197, 94, 0.45);
+    --accent-border: rgba(245, 158, 11, 0.45);
+    --danger-border: rgba(239, 68, 68, 0.45);
+    --info-border: rgba(156, 163, 175, 0.40);
+
+    /* Borders */
+    --border: #374151;
+    --border-subtle: #4B5563;
+    --border-focus: #22C55E;
+
+    --brand: var(--primary);
+    --brand-h: var(--primary-hover);
+    --brand-act: #16A34A;
+    --brand-soft: var(--primary-light);
+    --bg: var(--bg-base);
+    --surface: var(--bg-surface);
+    --sunken: var(--bg-muted);
+    --line: var(--border);
+    --line-2: var(--border-subtle);
+    --ink: var(--text-primary);
+    --ink-2: var(--text-secondary);
+    --muted: var(--text-muted);
+
+    color-scheme: dark;
   }
 }
 
+@theme {
+  --font-sans: var(--font-figtree), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-courier-prime), "Courier New", monospace;
+
+  /* Surfaces */
+  --color-bg-base: var(--bg-base);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-card: var(--bg-card);
+  --color-bg-sidebar: var(--bg-sidebar);
+  --color-bg-input: var(--bg-input);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-muted: var(--bg-muted);
+
+  /* Text */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-light: var(--text-light);
+
+  /* Brand / Action */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+  --color-primary-border: var(--primary-border);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+
+  /* Feedback / Status */
+  --color-success: var(--success);
+  --color-success-light: var(--success-light);
+  --color-success-border: var(--success-border);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-accent-border: var(--accent-border);
+  --color-danger: var(--danger);
+  --color-danger-light: var(--danger-light);
+  --color-danger-border: var(--danger-border);
+  --color-info: var(--info);
+  --color-info-light: var(--info-light);
+  --color-info-border: var(--info-border);
+
+  /* Borders */
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-focus: var(--border-focus);
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 15.5px;
+  line-height: 1.55;
+  font-feature-settings: "tnum" 1;
+}
+
+h1, h2, h3, h4, h5, h6, strong, b {
+  color: var(--text-primary);
 }
