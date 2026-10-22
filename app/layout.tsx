@@ -31,8 +31,14 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${figtree.variable} ${courierPrime.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-bg-base text-text-secondary font-sans">{children}</body>
+      <body
+        className="min-h-full flex flex-col bg-bg-base text-text-secondary font-sans"
+        suppressHydrationWarning
+      >
+        {children}
+      </body>
     </html>
   );
 }

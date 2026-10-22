@@ -15,20 +15,20 @@ interface LoginPageProps {
   }>
 }
 
-export default async function LoginPage(props: LoginPageProps) {
+export default async function LoginPage(props: Readonly<LoginPageProps>) {
   const searchParams = await props.searchParams
   const redirectTo = searchParams?.redirectTo || '/dashboard'
 
   return (
     <div className="relative min-h-screen grid grid-cols-1 md:grid-cols-[minmax(440px,46%)_1fr]">
       {/* Theme Toggle in top-right */}
-      <div className="absolute top-[18px] right-[18px] z-20">
+      <div className="absolute top-4.5 right-4.5 z-20">
         <ThemeToggle />
       </div>
 
       {/* Brand Hero Sidebar */}
       <section className="relative flex flex-col justify-center items-center p-7 md:p-14 text-center bg-primary dark:bg-linear-to-b dark:from-[#166534] dark:to-[#14532D] text-text-light">
-        <div className="flex flex-col items-center max-w-[440px] my-auto">
+        <div className="flex flex-col items-center max-w-110 my-auto">
           <div className="w-[min(340px,90%)] mx-auto mb-9">
             <Image
               src="/logo.png"
@@ -55,7 +55,7 @@ export default async function LoginPage(props: LoginPageProps) {
 
       {/* Login Form Container */}
       <section className="flex items-center justify-center p-6 md:p-12 bg-bg-base">
-        <div className="w-full max-w-[470px] bg-bg-surface border border-border rounded-xl p-8 md:p-11 shadow-xs">
+        <div className="w-full max-w-117.5 bg-bg-surface border border-border rounded-xl p-8 md:p-11 shadow-xs">
           <LoginForm redirectTo={redirectTo} />
         </div>
       </section>
