@@ -1,6 +1,39 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+function isMissingSupabaseConfig(url?: string, anonKey?: string): boolean {
+  return !url || !anonKey || url === 'your-project-url'
+}
+
+function copyCookies(sourceResponse: NextResponse, targetResponse: NextResponse): void {
+  sourceResponse.cookies.getAll().forEach(cookie => {
+    targetResponse.cookies.set(cookie.name, cookie.value, cookie)
+  })
+}
+
+function redirectToLogin(request: NextRequest, sourceResponse?: NextResponse): NextResponse {
+  const url = request.nextUrl.clone()
+  url.pathname = '/login'
+  const target = request.nextUrl.pathname + request.nextUrl.search
+  if (target && target !== '/') {
+    url.searchParams.set('redirectTo', target)
+  }
+  const redirectResponse = NextResponse.redirect(url)
+  if (sourceResponse) {
+    copyCookies(sourceResponse, redirectResponse)
+  }
+  return redirectResponse
+}
+
+function redirectToDashboard(request: NextRequest, sourceResponse: NextResponse): NextResponse {
+  const url = request.nextUrl.clone()
+  url.pathname = '/dashboard'
+  url.searchParams.delete('redirectTo')
+  const redirectResponse = NextResponse.redirect(url)
+  copyCookies(sourceResponse, redirectResponse)
+  return redirectResponse
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -11,24 +44,19 @@ export async function updateSession(request: NextRequest) {
 
   const isAuthPage = request.nextUrl.pathname.startsWith('/login')
   const isAuthCallback = request.nextUrl.pathname.startsWith('/auth')
+  const isPublicAuthRoute = isAuthPage || isAuthCallback
 
   // If Supabase credentials are not configured yet, guard protected routes gracefully
-  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'your-project-url') {
-    if (!isAuthPage && !isAuthCallback) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/login'
-      const target = request.nextUrl.pathname + request.nextUrl.search
-      if (target && target !== '/') {
-        url.searchParams.set('redirectTo', target)
-      }
-      return NextResponse.redirect(url)
+  if (isMissingSupabaseConfig(supabaseUrl, supabaseAnonKey)) {
+    if (!isPublicAuthRoute) {
+      return redirectToLogin(request)
     }
     return supabaseResponse
   }
 
   const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
+    supabaseUrl!,
+    supabaseAnonKey!,
     {
       cookies: {
         getAll() {
@@ -61,31 +89,15 @@ export async function updateSession(request: NextRequest) {
 
   // Scenario 3: Protected Route Interception
   // If user is unauthenticated and attempting to visit any protected route
-  if (!user && !isAuthPage && !isAuthCallback) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    const target = request.nextUrl.pathname + request.nextUrl.search
-    if (target && target !== '/') {
-      url.searchParams.set('redirectTo', target)
-    }
-    const redirectResponse = NextResponse.redirect(url)
-    supabaseResponse.cookies.getAll().forEach(cookie => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-    })
-    return redirectResponse
+  if (!user && !isPublicAuthRoute) {
+    return redirectToLogin(request, supabaseResponse)
   }
 
   // If user is authenticated and navigating to /login or root /
   if (user && (isAuthPage || request.nextUrl.pathname === '/')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    url.searchParams.delete('redirectTo')
-    const redirectResponse = NextResponse.redirect(url)
-    supabaseResponse.cookies.getAll().forEach(cookie => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-    })
-    return redirectResponse
+    return redirectToDashboard(request, supabaseResponse)
   }
 
   return supabaseResponse
 }
+
