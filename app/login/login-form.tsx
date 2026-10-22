@@ -14,7 +14,7 @@ const initialState: LoginFormState = {
   success: false,
 }
 
-export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
+export function LoginForm({ redirectTo = '/dashboard' }: Readonly<LoginFormProps>) {
   const [state, formAction, isPending] = useActionState(loginAction, initialState)
 
   return (
@@ -67,7 +67,7 @@ export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
           autoComplete="username"
           required
           placeholder="admin@arlq.com"
-          className="w-full min-h-[48px] px-4 py-3 text-[16.5px] rounded-lg bg-bg-input text-text-primary border border-border-subtle focus:outline-none focus:ring-2 focus:ring-primary focus:border-border-focus transition-colors"
+          className="w-full min-h-12 px-4 py-3 text-[16.5px] rounded-lg bg-bg-input text-text-primary border border-border-subtle focus:outline-none focus:ring-2 focus:ring-primary focus:border-border-focus transition-colors"
         />
       </div>
 
@@ -85,14 +85,14 @@ export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
           autoComplete="current-password"
           required
           placeholder="••••••••"
-          className="w-full min-h-[48px] px-4 py-3 text-[16.5px] rounded-lg bg-bg-input text-text-primary border border-border-subtle focus:outline-none focus:ring-2 focus:ring-primary focus:border-border-focus transition-colors"
+          className="w-full min-h-12 px-4 py-3 text-[16.5px] rounded-lg bg-bg-input text-text-primary border border-border-subtle focus:outline-none focus:ring-2 focus:ring-primary focus:border-border-focus transition-colors"
         />
       </div>
 
       <button
         type="submit"
         disabled={isPending}
-        className="w-full min-h-[48px] py-3 px-5 rounded-lg text-[16.5px] font-semibold bg-primary hover:bg-primary-hover text-text-light transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full min-h-12 py-3 px-5 rounded-lg text-[16.5px] font-semibold bg-primary hover:bg-primary-hover text-text-light transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {isPending ? (
           <>
