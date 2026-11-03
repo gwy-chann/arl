@@ -1,7 +1,8 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logoutAction } from '@/app/login/actions'
-import { ThemeToggle } from '@/app/login/theme-toggle'
+import { ThemeToggle } from '@/components/theme/theme-toggle'
 
 export const instant = false
 
@@ -85,6 +86,12 @@ export default async function DashboardPage() {
           <div className="bg-bg-surface border border-border rounded-xl p-6 shadow-xs">
             <div className="text-sm font-semibold text-text-muted mb-1">Quick Links</div>
             <div className="flex flex-col gap-2 mt-2">
+              <Link
+                href="/settings/appearance"
+                className="text-sm text-primary hover:underline font-medium"
+              >
+                Theme & Appearance Settings →
+              </Link>
               <a
                 href="#inventory"
                 className="text-sm text-primary hover:underline font-medium"

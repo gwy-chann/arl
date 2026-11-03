@@ -1,23 +1,23 @@
-import Image from 'next/image'
-import { LoginForm } from './login-form'
-import { ThemeToggle } from './theme-toggle'
+import Image from 'next/image';
+import { LoginForm } from './login-form';
+import { ThemeToggle } from '@/components/theme/theme-toggle';
 
-export const instant = false
+export const instant = false;
 
 export const metadata = {
   title: 'Log in · ARLQ',
   description: 'Administrator authentication for ARLQ inventory and sales system',
-}
+};
 
 interface LoginPageProps {
   searchParams: Promise<{
-    redirectTo?: string
-  }>
+    redirectTo?: string;
+  }>;
 }
 
 export default async function LoginPage(props: Readonly<LoginPageProps>) {
-  const searchParams = await props.searchParams
-  const redirectTo = searchParams?.redirectTo || '/dashboard'
+  const searchParams = await props.searchParams;
+  const redirectTo = searchParams?.redirectTo || '/dashboard';
 
   return (
     <div className="relative min-h-screen grid grid-cols-1 md:grid-cols-[minmax(440px,46%)_1fr]">
@@ -27,7 +27,7 @@ export default async function LoginPage(props: Readonly<LoginPageProps>) {
       </div>
 
       {/* Brand Hero Sidebar */}
-      <section className="relative flex flex-col justify-center items-center p-7 md:p-14 text-center bg-primary dark:bg-linear-to-b dark:from-[#166534] dark:to-[#14532D] text-text-light">
+      <section className="relative flex flex-col justify-center items-center p-7 md:p-14 text-center bg-primary dark:bg-linear-to-b dark:from-hero-gradient-from dark:to-hero-gradient-to text-text-light">
         <div className="flex flex-col items-center max-w-110 my-auto">
           <div className="w-[min(340px,90%)] mx-auto mb-9">
             <Image
@@ -60,5 +60,5 @@ export default async function LoginPage(props: Readonly<LoginPageProps>) {
         </div>
       </section>
     </div>
-  )
+  );
 }

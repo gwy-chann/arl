@@ -3,7 +3,24 @@
  * Source of truth extracted directly from mockup/styles.css and mockup/index.html
  */
 
-export type ThemeMode = 'light' | 'dark';
+export type ThemePreference = 'light' | 'dark' | 'auto';
+export type ResolvedTheme = 'light' | 'dark';
+export type ThemeMode = ResolvedTheme;
+
+export const THEME_STORAGE_KEY = 'arlq-theme';
+
+export function isValidThemePreference(value: unknown): value is ThemePreference {
+  return value === 'light' || value === 'dark' || value === 'auto';
+}
+
+export function resolveEffectiveTheme(
+  preference: ThemePreference,
+  systemPrefersDark: boolean
+): ResolvedTheme {
+  if (preference === 'dark') return 'dark';
+  if (preference === 'light') return 'light';
+  return systemPrefersDark ? 'dark' : 'light';
+}
 
 export interface ColorTokens {
   surfaces: {
@@ -28,6 +45,10 @@ export interface ColorTokens {
     primaryBorder: string;
     secondary: string;
     secondaryHover: string;
+    heroGradient: {
+      from: string;
+      to: string;
+    };
   };
   status: {
     success: {
@@ -90,6 +111,10 @@ export const LIGHT_THEME_TOKENS: ColorTokens = {
     primaryBorder: '#095B06', // primary button border
     secondary: '#FFFFFF',     // .btn.sec background
     secondaryHover: '#FAFAF8',// .btn.sec hover background
+    heroGradient: {
+      from: '#095B06',
+      to: '#095B06',
+    },
   },
   status: {
     success: {
@@ -152,6 +177,10 @@ export const DARK_THEME_TOKENS: ColorTokens = {
     primaryBorder: '#4ADE80',            // bright emerald button border
     secondary: '#374151',                // .btn.sec background
     secondaryHover: '#4B5563',           // .btn.sec hover background
+    heroGradient: {
+      from: '#166534',
+      to: '#14532D',
+    },
   },
   status: {
     success: {
@@ -213,7 +242,7 @@ export const TYPOGRAPHY_TOKENS = {
  * Helper to retrieve exact theme tokens for runtime calculations, charts,
  * canvas drawings, or SVG elements based on mode.
  */
-export function getThemeTokens(mode: ThemeMode = 'light'): ColorTokens {
+export function getThemeTokens(mode: ResolvedTheme = 'light'): ColorTokens {
   return mode === 'dark' ? DARK_THEME_TOKENS : LIGHT_THEME_TOKENS;
 }
 
