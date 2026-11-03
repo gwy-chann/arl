@@ -4,7 +4,7 @@
 **Feature Slug**: `003-responsive-layout-shell`  
 **Jira Story**: STORY-1.2: Responsive Layout Shell, Sidebar Navigation & Mobile Scrim  
 **Epic**: EPIC-1: Foundation, Authentication Hub & App Shell (`ARL-1`)  
-**Status**: In Progress  
+**Status**: Complete  
 
 ---
 
