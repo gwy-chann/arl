@@ -251,6 +251,18 @@
   --radius-xl: 12px;
 }
 
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade {
+  animation: fade 0.15s ease-out;
+}
 @keyframes pop {
   from {
     opacity: 0;
