@@ -23,6 +23,8 @@
   --primary-border: #095B06;
   --secondary: #FFFFFF;
   --secondary-hover: #FAFAF8;
+  --hero-gradient-from: #095B06;
+  --hero-gradient-to: #095B06;
 
   /* Feedback / Status */
   --success: #095B06;
@@ -88,6 +90,8 @@
   --primary-border: #4ADE80;
   --secondary: #374151;
   --secondary-hover: #4B5563;
+  --hero-gradient-from: #166534;
+  --hero-gradient-to: #14532D;
 
   /* Feedback / Status */
   --success: #4ADE80;
@@ -151,6 +155,8 @@
     --primary-border: #4ADE80;
     --secondary: #374151;
     --secondary-hover: #4B5563;
+    --hero-gradient-from: #166534;
+    --hero-gradient-to: #14532D;
 
     /* Feedback / Status */
     --success: #4ADE80;
@@ -216,6 +222,8 @@
   --color-primary-border: var(--primary-border);
   --color-secondary: var(--secondary);
   --color-secondary-hover: var(--secondary-hover);
+  --color-hero-gradient-from: var(--hero-gradient-from);
+  --color-hero-gradient-to: var(--hero-gradient-to);
 
   /* Feedback / Status */
   --color-success: var(--success);
@@ -241,6 +249,21 @@
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 12px;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-pop {
+  animation: pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 body {
