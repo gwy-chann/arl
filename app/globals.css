@@ -344,3 +344,11 @@ h1, h2, h3, h4, h5, h6, strong, b {
   margin: 4px;
   border-radius: 3px;
 }
+
+
+/* Brand Logo Mark extracted from mockup/styles.css */
+.logo-mark {
+  display: block;
+  aspect-ratio: 1.95 / 1;
+  background: url('/logo.png') center / 112% auto no-repeat;
+}

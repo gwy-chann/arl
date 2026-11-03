@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   NAV_ITEMS,
@@ -43,17 +42,12 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
       `}
     >
       {/* Brand Header */}
-      <div className="flex flex-col items-center justify-center py-4 px-6 gap-1.5 bg-primary dark:bg-linear-to-b dark:from-hero-gradient-from dark:to-hero-gradient-to dark:border-b dark:border-border text-text-light flex-shrink-0">
-        <div className="w-[155px] max-w-full">
-          <Image
-            src="/logo.png"
-            alt="ARL Quality Logo"
-            width={155}
-            height={65}
-            priority
-            className="w-full h-auto object-contain mx-auto"
-          />
-        </div>
+      <div className="flex flex-col items-center justify-center pt-4 pb-3.5 px-6 gap-1.5 bg-primary dark:bg-linear-to-b dark:from-hero-gradient-from dark:to-hero-gradient-to dark:border-b dark:border-border text-text-light flex-shrink-0">
+        <div
+          role="img"
+          aria-label="ARL Quality logo"
+          className="logo-mark w-full max-w-[155px] mx-auto"
+        />
         <span className="text-[12.5px] text-text-light/85 dark:text-text-secondary text-center leading-[1.3] font-medium">
           Food Condiments Trading
           <br />
@@ -181,4 +175,3 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
     </aside>
   );
 }
-
