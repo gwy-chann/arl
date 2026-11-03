@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Figtree, Courier_Prime } from "next/font/google";
+import { ThemeScript } from "@/components/theme/theme-script";
+import { ThemeProvider } from "@/components/theme/theme-provider";
+import { ToastProvider } from "@/components/ui/toast-provider";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -33,11 +36,18 @@ export default function RootLayout({
       className={`${figtree.variable} ${courierPrime.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <ThemeScript />
+      </head>
       <body
         className="min-h-full flex flex-col bg-bg-base text-text-secondary font-sans"
         suppressHydrationWarning
       >
-        {children}
+        <ToastProvider>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </ToastProvider>
       </body>
     </html>
   );
