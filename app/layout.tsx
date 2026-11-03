@@ -3,6 +3,7 @@ import { Figtree, Courier_Prime } from "next/font/google";
 import { ThemeScript } from "@/components/theme/theme-script";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { ConfirmProvider } from "@/components/ui/confirm-provider";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -44,9 +45,13 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ToastProvider>
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
+          <ConfirmProvider>
+            <ThemeProvider>
+              {children}
+            </ThemeProvider>
+            <div id="modal-root" />
+            <div id="toasts" />
+          </ConfirmProvider>
         </ToastProvider>
       </body>
     </html>
