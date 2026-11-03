@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useId } from 'react';
+import React, { useEffect, useRef, useId } from 'react';
 import { createPortal } from 'react-dom';
 import {
   lockBodyScroll,
   getNextFocusedIndex,
   getFocusableElements,
+  useIsMounted,
 } from '@/lib/modal-utils';
 import type { ModalProps, ModalMaxWidth } from '@/specs/004-modal-dialog-toast-system/contracts/modal-toast-contracts';
 
@@ -30,17 +31,12 @@ export function Modal({
   className = '',
   portalTargetId = 'modal-root',
 }: Readonly<ModalProps>) {
-  const [mounted, setMounted] = useState(false);
+  const isMounted = useIsMounted();
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
   const titleId = useId();
   const descId = useId();
-
-  // Handle client-side mount state
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Handle scroll lock and focus management lifecycle
   useEffect(() => {
@@ -112,7 +108,7 @@ export function Modal({
     };
   }, [isOpen, closeOnEscape, onClose]);
 
-  if (!isOpen || !mounted) {
+  if (!isOpen || !isMounted) {
     return null;
   }
 

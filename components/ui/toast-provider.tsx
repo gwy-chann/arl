@@ -6,10 +6,9 @@ import React, {
   useState,
   useCallback,
   useMemo,
-  useEffect,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { DEFAULT_TOAST_DURATION } from '@/lib/modal-utils';
+import { DEFAULT_TOAST_DURATION, useIsMounted } from '@/lib/modal-utils';
 import type {
   ToastItem,
   ToastVariant,
@@ -34,11 +33,7 @@ export function ToastProvider({
   portalTargetId?: string;
 }>) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const isMounted = useIsMounted();
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -124,7 +119,7 @@ export function ToastProvider({
   );
 
   const portalTarget =
-    mounted && typeof document !== 'undefined'
+    isMounted && typeof document !== 'undefined'
       ? document.getElementById(portalTargetId) || document.body
       : null;
 

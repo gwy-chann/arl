@@ -3,10 +3,24 @@
  * Feature: ARL-5 (004-modal-dialog-toast-system)
  */
 
+import { useSyncExternalStore } from 'react';
+
 export const DEFAULT_TOAST_DURATION = 2800; // Exactly 2.8s matching mockup/app.js:183
 
 export const FOCUSABLE_ELEMENTS_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Idiomatic React 19 hook to detect client-side mounting without triggering cascading render lint errors.
+ */
+const emptySubscribe = () => () => {};
+export function useIsMounted(): boolean {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
 
 /**
  * Calculates the next index in a circular focus loop.

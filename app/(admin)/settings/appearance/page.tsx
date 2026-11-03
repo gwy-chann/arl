@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ThemePicker } from '@/components/theme/theme-picker';
+import { ModalToastShowcase } from '@/components/ui/modal-toast-showcase';
 
 export const metadata = {
   title: 'Appearance Settings · ARLQ',
@@ -50,6 +51,9 @@ export default function AppearanceSettingsPage() {
 
         <ThemePicker />
       </section>
+
+      {/* Modal & Toast Showcase (ARL-5) */}
+      <ModalToastShowcase />
     </div>
   );
 }
