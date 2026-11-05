@@ -471,3 +471,51 @@ h1, h2, h3, h4, h5, h6, strong, b {
   color: var(--info);
   border: 1px solid var(--info-border);
 }
+
+/* Native Browser Print Stylesheet */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  aside,
+  header,
+  nav,
+  .sidebar,
+  .topbar,
+  .page-head,
+  .no-print,
+  .toasts,
+  button,
+  a {
+    display: none !important;
+  }
+  main#page {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .receipt-wrap {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+  .receipt {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    color: #000000 !important;
+  }
+  .receipt * {
+    color: #000000 !important;
+  }
+  .receipt hr,
+  .receipt .rh {
+    border-color: #cccccc !important;
+  }
+}
+
