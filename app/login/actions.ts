@@ -38,6 +38,15 @@ export async function loginAction(
     });
 
     if (error) {
+      // In dev mode, if local Supabase is offline, allow dev bypass so developers can test
+      if (
+        process.env.NODE_ENV === 'development' &&
+        (error.message?.includes('fetch') || error.message?.includes('network') || error.status === 0)
+      ) {
+        const target = redirectTo.startsWith('/') ? redirectTo : '/dashboard';
+        redirect(target);
+      }
+
       return {
         email,
         error: error.message === 'Invalid login credentials' 
@@ -45,12 +54,18 @@ export async function loginAction(
           : error.message,
       };
     }
-  } catch {
-    // If Supabase is offline during local dev, allow login with any admin password
+  } catch (err: unknown) {
+    // If Next.js redirect was thrown, re-throw it so Next.js handles the redirect
+    if (err && typeof err === 'object' && 'digest' in err) {
+      throw err;
+    }
+
+    // In dev mode, if Supabase is offline, allow login
     if (process.env.NODE_ENV === 'development') {
       const target = redirectTo.startsWith('/') ? redirectTo : '/dashboard';
       redirect(target);
     }
+
     return {
       email,
       error: 'Cannot connect to Supabase. Ensure local Supabase is running (npx supabase start) or check your network.',

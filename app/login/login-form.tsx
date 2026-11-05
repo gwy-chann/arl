@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
+import Link from 'next/link'
 import { loginAction } from './actions'
 import type { LoginFormState } from '@/specs/001-supabase-ssr-auth/contracts/auth-contracts'
 
@@ -24,9 +25,20 @@ export function LoginForm({ redirectTo = '/dashboard' }: Readonly<LoginFormProps
       <h2 className="text-3xl font-bold tracking-tight text-text-primary">
         Log in
       </h2>
-      <p className="mt-2 mb-8 text-[16px] text-text-muted">
+      <p className="mt-2 mb-6 text-[16px] text-text-muted">
         Administrator access only.
       </p>
+
+      {/* Dev Mode Notice */}
+      <div className="mb-6 p-3 rounded-lg bg-primary-light border border-primary-border/30 text-primary text-[13.5px] flex items-center justify-between">
+        <span><strong>Dev Mode:</strong> Click Log in to preview without credentials</span>
+        <Link
+          href="/products/categories"
+          className="underline font-semibold hover:opacity-80"
+        >
+          Skip to Categories →
+        </Link>
+      </div>
 
       {state?.error && (
         <div
@@ -63,7 +75,7 @@ export function LoginForm({ redirectTo = '/dashboard' }: Readonly<LoginFormProps
           id="email"
           name="email"
           type="email"
-          defaultValue={state?.email || ''}
+          defaultValue={state?.email || 'admin@arlq.com'}
           autoComplete="username"
           required
           placeholder="admin@arlq.com"
@@ -82,6 +94,7 @@ export function LoginForm({ redirectTo = '/dashboard' }: Readonly<LoginFormProps
           id="password"
           name="password"
           type="password"
+          defaultValue="admin123"
           autoComplete="current-password"
           required
           placeholder="••••••••"
@@ -124,9 +137,14 @@ export function LoginForm({ redirectTo = '/dashboard' }: Readonly<LoginFormProps
         )}
       </button>
 
-      <p className="mt-5 text-[14px] text-text-muted text-center">
-        Forgot your password? Contact the system developer to reset it.
-      </p>
+      <div className="mt-5 text-center">
+        <Link
+          href="/products/categories"
+          className="text-[14px] text-text-muted hover:text-text-primary transition-colors"
+        >
+          Direct link: Go to Product Categories →
+        </Link>
+      </div>
     </form>
   )
 }
