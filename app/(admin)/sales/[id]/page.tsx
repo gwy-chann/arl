@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { connection } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getSafeSupabaseClient } from '@/lib/supabase/server';
 import { SaleService } from '@/lib/sales/sale-service';
 import { getSystemSettings } from '@/lib/settings/settings-service';
 import { formatPeso } from '@/lib/customers/customer-service';
@@ -43,7 +43,7 @@ interface SaleDetailPageProps {
 export default async function SaleDetailPage({ params }: Readonly<SaleDetailPageProps>) {
   await connection();
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = await getSafeSupabaseClient();
   const saleService = new SaleService(supabase);
 
   const [sale, settings] = await Promise.all([

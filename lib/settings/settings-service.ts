@@ -45,7 +45,7 @@ export function _resetSettingsStore() {
 /**
  * Retrieves the store system settings.
  */
-export async function getSystemSettings(supabaseClient?: SupabaseClient): Promise<SystemSettingsDTO> {
+export async function getSystemSettings(supabaseClient?: SupabaseClient | null): Promise<SystemSettingsDTO> {
   if (supabaseClient) {
     try {
       const { data, error } = await supabaseClient

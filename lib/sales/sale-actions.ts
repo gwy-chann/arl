@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '../supabase/server.ts';
+import { getSafeSupabaseClient } from '../supabase/server.ts';
 import { SaleService } from './sale-service.ts';
 import type {
   CreateSaleInput,
@@ -11,7 +11,7 @@ import type {
 
 export async function submitNewSale(input: CreateSaleInput) {
   try {
-    const supabase = await createClient();
+    const supabase = await getSafeSupabaseClient();
     const service = new SaleService(supabase);
     const result = await service.createSaleTransaction(input);
 
@@ -34,7 +34,7 @@ export async function submitNewSale(input: CreateSaleInput) {
 
 export async function updateSalePaymentAction(input: UpdateSalePaymentInput) {
   try {
-    const supabase = await createClient();
+    const supabase = await getSafeSupabaseClient();
     const service = new SaleService(supabase);
     const result = await service.updateSalePayment(
       input.saleId,
@@ -60,7 +60,7 @@ export async function updateSalePaymentAction(input: UpdateSalePaymentInput) {
 
 export async function updateSaleOrderStatusAction(input: UpdateSaleOrderStatusInput) {
   try {
-    const supabase = await createClient();
+    const supabase = await getSafeSupabaseClient();
     const service = new SaleService(supabase);
     const result = await service.updateSaleOrderStatus(
       input.saleId,

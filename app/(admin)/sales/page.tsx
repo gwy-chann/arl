@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { connection } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getSafeSupabaseClient } from '@/lib/supabase/server';
 import { SaleService } from '@/lib/sales/sale-service';
 import { SalesLedgerTable } from '@/components/sales/sales-ledger-table';
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default async function SalesPage() {
   await connection();
-  const supabase = await createClient();
+  const supabase = await getSafeSupabaseClient();
   const saleService = new SaleService(supabase);
   const sales = await saleService.getSales();
 
