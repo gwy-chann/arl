@@ -90,7 +90,6 @@ describe('Feature ARL-15: Sales Transaction Ledger, Detail View & Status Manager
 
   describe('Scenario 2: Overdue sale alert banner', () => {
     it('detects a sale unpaid for 9 days with 7-day threshold and formats overdue alert banner', async () => {
-      const saleService = new SaleService(null);
       const settings = await getSystemSettings();
       assert.equal(settings.reminder_days, 7);
 
