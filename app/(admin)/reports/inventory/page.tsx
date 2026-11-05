@@ -4,6 +4,8 @@ import { getSafeSupabaseClient } from '@/lib/supabase/server';
 import { ProductService } from '@/lib/products/product-service';
 import { InventoryReportView } from '@/components/reports/inventory-report-view';
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: 'Inventory Valuation Report · ARLQ',
   description: 'Warehouse inventory valuation breakdown comparing cost basis versus retail selling price.',

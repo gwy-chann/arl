@@ -6,6 +6,8 @@ import { StockService } from '@/lib/inventory/stock-service';
 import { MovementReportView } from '@/components/reports/movement-report-view';
 import type { StockMovementReference } from '@/lib/reports/report-service';
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: 'Stock Movement Report · ARLQ',
   description: 'Inbound and outbound condiment inventory velocity across flexible reporting ranges.',

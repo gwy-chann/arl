@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { getStockMinimumsMatrix } from '@/lib/settings/settings-service';
 import { StockMinimumsForm } from '@/components/settings/stock-minimums-form';
 
+export const instant = false;
+
 export const metadata = {
   title: 'Minimum Stock Levels · Settings · ARLQ',
   description: 'Manage low stock alert thresholds across all product sizes and variants',

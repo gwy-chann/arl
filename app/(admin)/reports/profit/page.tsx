@@ -5,6 +5,8 @@ import { ProductService } from '@/lib/products/product-service';
 import { SaleService } from '@/lib/sales/sale-service';
 import { ProfitReportView } from '@/components/reports/profit-report-view';
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: 'Earnings & Profit Report · ARLQ',
   description: 'Gross profit margins and earnings analysis across condiment product variants.',

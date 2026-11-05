@@ -5,6 +5,8 @@ import { getCustomerDirectory } from '@/lib/customers/customer-service';
 import { SaleService } from '@/lib/sales/sale-service';
 import { BalancesReportView } from '@/components/reports/balances-report-view';
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: 'Customer Balances Report · ARLQ',
   description: 'Auditing outstanding customer debts and unpaid condiment order balances.',

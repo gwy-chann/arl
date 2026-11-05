@@ -5,6 +5,8 @@ import { ProductService } from '@/lib/products/product-service';
 import { SaleService } from '@/lib/sales/sale-service';
 import { SalesReportView } from '@/components/reports/sales-report-view';
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: 'Sales Report · ARLQ',
   description: 'Itemized and aggregate sales report across daily, weekly, and monthly periods.',

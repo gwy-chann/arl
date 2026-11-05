@@ -4,6 +4,8 @@ import { getSafeSupabaseClient } from '@/lib/supabase/server';
 import { ProductService } from '@/lib/products/product-service';
 import { LowStockReportView } from '@/components/reports/low-stock-report-view';
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: 'Low Stock Report · ARLQ',
   description: 'Replenishment shortfalls and variants currently at or below minimum threshold levels.',
