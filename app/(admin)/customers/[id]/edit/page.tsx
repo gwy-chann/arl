@@ -1,7 +1,10 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
 import { getCustomerByIdAction } from '@/lib/customers/customer-actions';
 import { CustomerForm } from '@/components/customers/customer-form';
+
+export const instant = false;
 
 interface EditCustomerPageProps {
   params: Promise<{ id: string }>;
@@ -10,6 +13,7 @@ interface EditCustomerPageProps {
 export async function generateMetadata({
   params,
 }: EditCustomerPageProps): Promise<Metadata> {
+  await connection();
   const { id } = await params;
   const customer = await getCustomerByIdAction(id);
 
@@ -28,6 +32,7 @@ export async function generateMetadata({
 export default async function EditCustomerPage({
   params,
 }: EditCustomerPageProps) {
+  await connection();
   const { id } = await params;
   const customer = await getCustomerByIdAction(id);
 
