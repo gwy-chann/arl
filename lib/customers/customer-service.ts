@@ -26,6 +26,22 @@ export function calculateCustomerBalance(
   }, 0);
 }
 
+export function getDaysOutstanding(
+  createdAt: string,
+  referenceDate: Date = new Date()
+): number {
+  const created = new Date(createdAt);
+  const diffTime = referenceDate.getTime() - created.getTime();
+  return Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+}
+
+export function isSaleOverdue(
+  daysOutstanding: number,
+  thresholdDays: number = 7
+): boolean {
+  return daysOutstanding >= thresholdDays;
+}
+
 export interface FormattedBalance {
   formatted: string;
   isIndebted: boolean;
@@ -206,6 +222,61 @@ const INITIAL_SALES: SaleSummary[] = [
     order_status: 'Picked Up',
     created_at: '2026-10-14T10:00:00Z',
   },
+  {
+    id: 's6',
+    receipt_number: 'ARLQ-01020',
+    customer_id: 'k7',
+    total_amount: 500,
+    amount_paid: 500,
+    balance: 0,
+    payment_status: 'Paid',
+    order_status: 'Delivered',
+    created_at: '2026-10-05T08:00:00Z',
+  },
+  {
+    id: 's7',
+    receipt_number: 'ARLQ-01028',
+    customer_id: 'k7',
+    total_amount: 750,
+    amount_paid: 750,
+    balance: 0,
+    payment_status: 'Paid',
+    order_status: 'Delivered',
+    created_at: '2026-10-09T10:00:00Z',
+  },
+  {
+    id: 's8',
+    receipt_number: 'ARLQ-01035',
+    customer_id: 'k7',
+    total_amount: 400,
+    amount_paid: 400,
+    balance: 0,
+    payment_status: 'Paid',
+    order_status: 'Picked Up',
+    created_at: '2026-10-13T11:00:00Z',
+  },
+  {
+    id: 's9',
+    receipt_number: 'ARLQ-01052',
+    customer_id: 'k7',
+    total_amount: 600,
+    amount_paid: 450,
+    balance: 150,
+    payment_status: 'Partially Paid',
+    order_status: 'Pending',
+    created_at: '2026-10-20T14:00:00Z',
+  },
+  {
+    id: 's10',
+    receipt_number: 'ARLQ-01058',
+    customer_id: 'k7',
+    total_amount: 450,
+    amount_paid: 300,
+    balance: 150,
+    payment_status: 'Partially Paid',
+    order_status: 'Delivered',
+    created_at: '2026-10-25T15:30:00Z',
+  },
 ];
 
 let memoryCustomers: CustomerWithRollup[] = [...INITIAL_CUSTOMERS];
@@ -298,19 +369,26 @@ export async function getCustomerById(
           .from('sales')
           .select('*')
           .eq('customer_id', id)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: true });
 
-        const sales: SaleSummary[] = (salesData || []).map((s) => ({
-          id: s.id,
-          receipt_number: s.receipt_number,
-          customer_id: s.customer_id,
-          total_amount: Number(s.total_amount),
-          amount_paid: Number(s.amount_paid),
-          balance: Math.max(0, Number(s.total_amount) - Number(s.amount_paid)),
-          payment_status: s.payment_status,
-          order_status: s.order_status,
-          created_at: s.created_at,
-        }));
+        const sales: SaleSummary[] = (salesData || []).map((s) => {
+          const balance = Math.max(0, Number(s.total_amount) - Number(s.amount_paid));
+          const days = getDaysOutstanding(s.created_at);
+          const overdue = balance > 0 && isSaleOverdue(days);
+          return {
+            id: s.id,
+            receipt_number: s.receipt_number,
+            customer_id: s.customer_id,
+            total_amount: Number(s.total_amount),
+            amount_paid: Number(s.amount_paid),
+            balance,
+            payment_status: s.payment_status,
+            order_status: s.order_status,
+            created_at: s.created_at,
+            days_outstanding: days,
+            is_overdue: overdue,
+          };
+        });
 
         const debt = calculateCustomerBalance(sales);
 
@@ -334,7 +412,19 @@ export async function getCustomerById(
   const found = memoryCustomers.find((c) => c.id === id);
   if (!found) return null;
 
-  const sales = memorySales.filter((s) => s.customer_id === id);
+  const rawSales = memorySales.filter((s) => s.customer_id === id);
+  const sales: SaleSummary[] = rawSales
+    .map((s) => {
+      const days = s.days_outstanding ?? getDaysOutstanding(s.created_at);
+      const overdue = s.is_overdue ?? (s.balance > 0 && isSaleOverdue(days));
+      return {
+        ...s,
+        days_outstanding: days,
+        is_overdue: overdue,
+      };
+    })
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
   const debt = calculateCustomerBalance(sales);
 
   return {
