@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { connection } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 export const instant = false;
@@ -9,11 +10,39 @@ export const metadata = {
   description: 'Administrator dashboard for ARLQ inventory and sales system',
 };
 
+interface AdminUserMetadata {
+  name?: string;
+  role?: string;
+}
+
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  await connection();
+
+  let user: {
+    id?: string;
+    email?: string;
+    user_metadata?: AdminUserMetadata;
+  } | null = null;
+
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    user = data?.user ?? null;
+  } catch {
+    user = null;
+  }
+
+  // Graceful fallback for local development when Supabase container is offline
+  if (!user && process.env.NODE_ENV === 'development') {
+    user = {
+      id: 'dev-admin',
+      email: 'admin@arlq.com',
+      user_metadata: {
+        name: 'Administrator',
+        role: 'Owner account',
+      },
+    };
+  }
 
   if (!user) {
     redirect('/login?redirectTo=/dashboard');
@@ -58,22 +87,16 @@ export default async function DashboardPage() {
           <div className="text-sm font-semibold text-text-muted mb-1">Quick Links</div>
           <div className="flex flex-col gap-2 mt-2">
             <Link
+              href="/products/categories"
+              className="text-sm text-primary hover:underline font-semibold flex items-center gap-1"
+            >
+              🏷️ Product Categories (ARL-7) →
+            </Link>
+            <Link
               href="/settings/appearance"
               className="text-sm text-primary hover:underline font-medium"
             >
               Theme & Appearance Settings →
-            </Link>
-            <Link
-              href="/inventory"
-              className="text-sm text-primary hover:underline font-medium"
-            >
-              View Inventory Catalog →
-            </Link>
-            <Link
-              href="/sales"
-              className="text-sm text-primary hover:underline font-medium"
-            >
-              View Sales & Utang →
             </Link>
           </div>
         </div>
