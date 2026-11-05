@@ -8,7 +8,7 @@ description: >-
 
 # Pull Request (PR) Creation Skill
 
-This skill defines the mandatory standards, templates, and workflows for preparing, describing, rebasing, and opening clean, review-ready Pull Requests linked to Jira tickets. All PR branches must strictly be rebased onto the target base branch (`main` or `develop`) prior to opening or updating.
+This skill defines the mandatory standards, templates, and workflows for preparing, describing, rebasing, and opening clean, review-ready Pull Requests linked to Jira tickets for the **ARLQ Inventory & Sales System** (`arl`). All PR branches must strictly be rebased onto the target base branch (`main`) prior to opening or updating.
 
 ---
 
@@ -25,9 +25,9 @@ Every Pull Request title must follow a standardized format linking Conventional 
 | Component | Format | Rules & Constraints |
 | :--- | :--- | :--- |
 | `<type>` | Lowercase | Standard Conventional Commit type: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `perf`, `hotfix`. |
-| `(<scope>)` | Optional, Lowercase | Area of codebase touched (e.g. `(auth)`, `(db)`, `(ui)`, `(api)`, `(deps)`). |
-| `[<JIRA-KEY>]` | Uppercase brackets | Exact Jira issue key (e.g. `[SWIFT-101]`, `[AUTH-42]`). Use `[NO-JIRA]` only for unticketed maintenance. |
-| `<description>` | Imperative present tense | Start with lowercase letter, no trailing period, max 72 characters total. (e.g., `integrate Supabase session middleware`). |
+| `(<scope>)` | Optional, Lowercase | Area touched (e.g. `(auth)`, `(categories)`, `(products)`, `(inventory)`, `(sales)`, `(customers)`, `(reports)`, `(deps)`, `(ui)`, `(config)`). |
+| `[<JIRA-KEY>]` | Uppercase brackets | Exact Jira issue key (e.g. `[ARL-7]`, `[ARL-12]`). Use `[NO-JIRA]` only for unticketed infrastructure maintenance. |
+| `<description>` | Imperative present tense | Start with lowercase letter, no trailing period, max 72 characters total. (e.g., `implement product category management with cascade validation`). |
 
 ---
 
@@ -35,21 +35,21 @@ Every Pull Request title must follow a standardized format linking Conventional 
 
 | Type | Example Title |
 | :--- | :--- |
-| **Feature** | `feat(auth): [SWIFT-101] implement Supabase session middleware and auth cookies` |
-| **Bug Fix** | `fix(db): [SWIFT-204] resolve PrismaClient missing export in client initialization` |
-| **Refactor** | `refactor(tokens): [SWIFT-305] streamline token refresh and validation logic` |
-| **Chore** | `chore(deps): [SWIFT-412] upgrade Tailwind CSS and PostCSS configuration` |
-| **Hotfix** | `hotfix(session): [SWIFT-999] invalidate leaked session tokens immediately` |
+| **Feature** | `feat(categories): [ARL-7] implement product category management with cascade validation` |
+| **Bug Fix** | `fix(auth): [ARL-2] resolve login hydration error and middleware cookie sync` |
+| **Refactor** | `refactor(tokens): [ARL-5] streamline semantic color tokens and surface treatments` |
+| **Chore** | `chore(git): [NO-JIRA] configure comprehensive .gitignore for nextjs and supabase` |
+| **Hotfix** | `hotfix(sales): [ARL-99] prevent duplicate order submission on rapid checkout clicks` |
 
 ---
 
 ## 📝 Standard PR Description Template
 
-Every PR description must use the following standard template. Copy and fill out all relevant sections before opening the PR.
+Every PR description must use the following standard template (also mirrored in [resources/template.md](./resources/template.md) and [.github/pull_request_template.md](../../../.github/pull_request_template.md)):
 
 ```markdown
 ## 🎫 Jira Ticket
-- **Jira Issue**: [SWIFT-XXX](https://your-domain.atlassian.net/browse/SWIFT-XXX)
+- **Jira Issue**: [ARL-XXX](https://your-domain.atlassian.net/browse/ARL-XXX)
 - **Type**: Feature | Bugfix | Refactor | Chore | Hotfix
 
 ---
@@ -74,7 +74,7 @@ A concise 2–3 sentence overview of what this PR accomplishes, the business or 
 ---
 
 ## 🏛️ Architectural & Knowledge Graph Impact
-- **Modules / Subsystems Affected**: `lib/supabase`, `middleware.ts`, `prisma/`
+- **Modules / Subsystems Affected**: `app/`, `components/`, `lib/`, `supabase/`
 - **Import Cycles**: None introduced (verified via Graphify)
 - **Knowledge Graph**: Updated via `/graphify . --update` ([GRAPH_REPORT.md](file:///path/to/graphify-out/GRAPH_REPORT.md))
 
@@ -97,19 +97,18 @@ A concise 2–3 sentence overview of what this PR accomplishes, the business or 
    npm install
    ```
 2. **Environment & Service Setup**:
-   - Ensure local Supabase is running: `npx supabase status`
-   - Run database migrations: `npx prisma db push` (or `migrate dev`)
+   - Ensure environment variables are populated in `.env.local` based on `.env.example`.
 3. **Step-by-Step Test Scenarios**:
-   - Navigate to `http://localhost:3000/login`
-   - Perform action X and verify expectation Y.
-   - Verify logs / network tab for expected output Z.
+   - Step 1: Navigate to `http://localhost:3000/...`
+   - Step 2: Perform action X and verify expectation Y.
+   - Step 3: Inspect network requests / cookies / console for expected behavior.
 
 ---
 
 ## ✅ Pre-Merge Checklist
 
-- [ ] **Jira Linked**: Title and description reference the correct `SWIFT-XXX` ticket.
-- [ ] **Rebased**: Branch is cleanly rebased onto the latest target branch (`main` or `develop`) with no merge commits.
+- [ ] **Jira Linked**: Title and description reference the correct `ARL-XXX` ticket.
+- [ ] **Rebased**: Branch is cleanly rebased onto the latest target branch (`main`) with no merge commits.
 - [ ] **Typecheck**: `npx tsc --noEmit` passes with 0 errors.
 - [ ] **Linting**: `npm run lint` passes without warnings/errors.
 - [ ] **Tests**: `npm test` passes (or new tests added).
@@ -122,16 +121,16 @@ A concise 2–3 sentence overview of what this PR accomplishes, the business or 
 
 ## 📋 Pre-Flight Verification Workflow
 
-Before running `gh pr create`:
+Before opening the PR:
 
 ### 1. Mandatory Branch Rebase (Never Merge)
-Always rebase your branch directly onto the latest target branch (`origin/main` or `origin/develop`). **Never use `git merge`** to update feature branches from upstream — maintain a clean, linear git history with zero merge commits:
+Always rebase your branch directly onto the latest target branch (`origin/main`). **Never use `git merge`** to update feature branches from upstream — maintain a clean, linear git history with zero merge commits:
 
 ```bash
 # Fetch latest remote changes
 git fetch origin
 
-# Rebase onto the base target branch (e.g. main)
+# Rebase onto the base target branch (main)
 git rebase origin/main
 
 # If conflicts arise:
@@ -178,13 +177,13 @@ git diff origin/main..HEAD
 
 ### 1. Mandatory Automated Synthesis (Never Leave Empty)
 When executing `/create-pr`, the agent MUST automatically synthesize a complete, populated PR title and description based on:
-- Jira ticket details (fetched via Jira MCP or branch name)
+- Jira ticket details (fetched via Atlassian MCP or branch name)
 - Atomic commit history (`git log origin/main..HEAD --oneline`)
 - SpecKit artifacts (`specs/<feature>/spec.md`, `tasks.md`, test suites)
 - Template standard (`.github/pull_request_template.md`)
 
 **CRITICAL RULES:**
-- **Zero Empty Placeholders**: Never leave `[SWIFT-XXX]`, blank bullet points, or unedited template comments in the PR body.
+- **Zero Empty Placeholders**: Never leave `[ARL-XXX]`, blank bullet points, or unedited template comments in the PR body.
 - **Zero Tracked PR Files**: **NEVER** write or commit standalone PR description markdown files into the repository (e.g., `.github/PULL_REQUEST_*.md`). Keep git history and workspace clean.
 - **Always Output to Conversation**: Always output the full synthesized Title and Description in the conversation response so the user can review or paste it into GitHub Web UI if needed.
 
@@ -196,34 +195,32 @@ git push -u origin <branch-name> --force-with-lease
 
 ### 3. Automatically Create or Update PR via GitHub CLI (`gh`)
 
-#### Case A: PR Does Not Exist Yet
-Pass the synthesized description directly via stdin (or a temporary `.git/PR_DESCRIPTION.md` which is git-ignored):
+#### Case A: Using the Automation Script
+```powershell
+powershell -ExecutionPolicy Bypass -File .agents/skills/create-pr/scripts/create-pr.ps1 `
+  -Title "feat(categories): [ARL-7] implement product category management" `
+  -BodyFile ".git/TEMP_PR_BODY.md" `
+  -BaseBranch "main"
+```
+
+#### Case B: Direct CLI Execution (PowerShell)
 ```powershell
 # PowerShell: Pipe synthesized markdown via standard input
 $body = @"
 <SYNTHESIZED_FULL_PR_BODY>
 "@
-$body | gh pr create --base main --head <branch-name> --title "<type>(<scope>): [<JIRA-KEY>] <summary>" --body-file -
+$body | gh pr create --base main --head <branch-name> --title "<type>(<scope>): [<ARL-KEY>] <summary>" --body-file -
 ```
 
-```bash
-# Bash / Linux / macOS:
-gh pr create \
-  --base main \
-  --head <branch-name> \
-  --title "<type>(<scope>): [<JIRA-KEY>] <summary>" \
-  --body "$SYNTHESIZED_BODY"
-```
-
-#### Case B: PR Already Opened (e.g., via Web UI or Draft)
+#### Case C: PR Already Opened (Update Existing)
 If a PR already exists for the branch (detect via `gh pr list --head <branch-name>`), automatically update the existing PR's title and description so it is never left empty:
 ```powershell
-$body | gh pr edit <pr-number> --title "<type>(<scope>): [<JIRA-KEY>] <summary>" --body-file -
+$body | gh pr edit <pr-number> --title "<type>(<scope>): [<ARL-KEY>] <summary>" --body-file -
 ```
 
-#### Case C: Web UI / Manual Update
-If GitHub CLI lacks write permissions for the authenticated account, immediately supply the user with:
-1. The exact PR URL (e.g., `https://github.com/gwy-chann/swift/pull/<pr-number>`)
+#### Case D: Web UI / Manual Fallback
+If GitHub CLI lacks write permissions or isn't authenticated, immediately supply the user with:
+1. The exact PR URL (e.g., `https://github.com/gwy-chann/arl/pull/<pr-number>` or `https://github.com/gwy-chann/arl/compare`)
 2. The exact formatted Title to paste into the title field
 3. The exact complete Markdown Description to paste into the description body box
 
@@ -245,7 +242,7 @@ Whenever `/create-pr` is executed or a PR is opened:
      - Unit & Integration Tests: PASSED (`npm test`)
      - Linting: PASSED (`npm run lint`)
      - Knowledge Graph: Synced via `/graphify . --update`
-     - SWIFT Design Tokens: 100% compliant with semantic tokens
+     - ARL Design Tokens: 100% compliant with semantic tokens
    ```
 2. **Workflow Transition**:
    Transition the ticket status to `In Review` (if available via `transitionJiraIssue`).
@@ -263,4 +260,3 @@ Once the Pull Request is merged into `main` (either through GitHub web UI or `gh
   4. Pulls latest `origin/main` into local repository.
   5. Runs `graphify . --update` to resync knowledge graph.
   6. Safely cleans up the local feature branch.
-
