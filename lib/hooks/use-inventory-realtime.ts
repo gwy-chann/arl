@@ -17,11 +17,13 @@ interface RealtimeVariantRow {
 
 export function useInventoryRealtime(initialVariants: InventoryVariant[]) {
   const [variants, setVariants] = useState<InventoryVariant[]>(initialVariants);
+  const [prevInitialVariants, setPrevInitialVariants] = useState(initialVariants);
 
-  // Keep state synced when initialVariants prop changes
-  useEffect(() => {
+  // Synchronize state during render if parent initialVariants changes
+  if (initialVariants !== prevInitialVariants) {
+    setPrevInitialVariants(initialVariants);
     setVariants(initialVariants);
-  }, [initialVariants]);
+  }
 
   // Handle single variant update
   const handleVariantUpdate = useCallback((updatedRow: RealtimeVariantRow) => {
