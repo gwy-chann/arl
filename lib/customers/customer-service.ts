@@ -733,16 +733,16 @@ export async function getCustomerUtangSummary(
     try {
       const { data, error } = await supabase.from('sales').select('*');
       if (!error && data && data.length > 0) {
-        sales = data.map((s: any) => ({
-          id: s.id,
-          receipt_number: s.receipt_number,
-          customer_id: s.customer_id,
+        sales = (data as Array<Record<string, unknown>>).map((s) => ({
+          id: String(s.id),
+          receipt_number: String(s.receipt_number),
+          customer_id: String(s.customer_id),
           total_amount: Number(s.total_amount),
           amount_paid: Number(s.amount_paid),
           balance: Number(s.balance),
-          payment_status: s.payment_status,
-          order_status: s.order_status,
-          created_at: s.created_at,
+          payment_status: s.payment_status as SaleSummary['payment_status'],
+          order_status: s.order_status as SaleSummary['order_status'],
+          created_at: String(s.created_at),
         }));
       } else {
         sales = [...memorySales];
