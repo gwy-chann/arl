@@ -92,7 +92,13 @@ export const NAV_ITEMS: readonly NavItem[] = [
     key: 'settings',
     label: 'Settings',
     icon: 'gear',
-    href: '/settings/appearance',
+    href: '/settings/reminders',
+    subNav: [
+      { label: 'Reminder settings', href: '/settings/reminders', key: 'settings/reminders' },
+      { label: 'Minimum stock levels', href: '/settings/stock', key: 'settings/stock' },
+      { label: 'Appearance', href: '/settings/appearance', key: 'settings/appearance' },
+      { label: 'Change password', href: '/settings/password', key: 'settings/password' },
+    ],
   },
 ] as const;
 
