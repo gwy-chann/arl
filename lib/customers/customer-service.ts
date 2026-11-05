@@ -180,14 +180,14 @@ const INITIAL_SALES: SaleSummary[] = [
   },
   {
     id: 's2',
-    receipt_number: 'ARLQ-01050',
+    receipt_number: 'ARLQ-01058',
     customer_id: 'k1',
     total_amount: 1340,
     amount_paid: 0,
     balance: 1340,
     payment_status: 'Not Yet Paid',
     order_status: 'Delivered',
-    created_at: '2026-10-15T11:00:00Z',
+    created_at: '2026-10-27T00:00:00Z',
   },
   {
     id: 's3',
@@ -294,6 +294,52 @@ export function recordCustomerSale(sale: SaleSummary): void {
     cust.purchase_count = (cust.purchase_count || 0) + 1;
     const debtIncrease = Math.max(0, sale.total_amount - sale.amount_paid);
     cust.debt_balance = (cust.debt_balance || 0) + debtIncrease;
+  }
+}
+
+export function updateCustomerSalePayment(
+  saleIdOrReceipt: string,
+  amountPaid: number,
+  paymentStatus: 'Paid' | 'Partially Paid' | 'Not Yet Paid',
+  customerId?: string,
+  totalAmount?: number
+): void {
+  const cleanKey = saleIdOrReceipt.trim().toLowerCase();
+  const sale = memorySales.find(
+    (s) =>
+      s.id.toLowerCase() === cleanKey ||
+      s.receipt_number.toLowerCase() === cleanKey
+  );
+  if (sale) {
+    const oldDebt = Math.max(0, sale.total_amount - sale.amount_paid);
+    const newDebt = Math.max(0, sale.total_amount - amountPaid);
+    sale.amount_paid = amountPaid;
+    sale.balance = newDebt;
+    sale.payment_status = paymentStatus;
+
+    const cust = memoryCustomers.find((c) => c.id === sale.customer_id);
+    if (cust) {
+      cust.debt_balance = Math.max(
+        0,
+        Math.round(((cust.debt_balance || 0) - oldDebt + newDebt + Number.EPSILON) * 100) / 100
+      );
+    }
+  } else if (customerId && totalAmount !== undefined) {
+    const cust = memoryCustomers.find((c) => c.id === customerId);
+    if (cust) {
+      if (paymentStatus === 'Paid') {
+        cust.debt_balance = Math.max(
+          0,
+          Math.round(((cust.debt_balance || 0) - totalAmount + Number.EPSILON) * 100) / 100
+        );
+      } else {
+        const remaining = Math.max(0, totalAmount - amountPaid);
+        cust.debt_balance = Math.max(
+          0,
+          Math.round(((cust.debt_balance || 0) - totalAmount + remaining + Number.EPSILON) * 100) / 100
+        );
+      }
+    }
   }
 }
 

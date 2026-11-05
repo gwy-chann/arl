@@ -12,13 +12,79 @@ import {
 } from './sale-contracts.ts';
 import { ProductService } from '../products/product-service.ts';
 import { StockService } from '../inventory/stock-service.ts';
-import { recordCustomerSale, formatPeso } from '../customers/customer-service.ts';
+import {
+  recordCustomerSale,
+  updateCustomerSalePayment,
+  formatPeso,
+} from '../customers/customer-service.ts';
+import { getSystemSettings } from '../settings/settings-service.ts';
 
 export interface VariantStockLookup {
   stock_quantity: number;
   selling_price: number;
   cost_price: number;
   product_name: string;
+}
+
+/**
+ * Calculates calendar days elapsed since a sale was recorded.
+ */
+export function getDaysUnpaid(createdAt: string, asOfDate?: Date): number {
+  const asOf = asOfDate || new Date();
+  const created = new Date(createdAt);
+  const diffMs = asOf.getTime() - created.getTime();
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+}
+
+/**
+ * Determines whether an unpaid sale is overdue according to store reminder thresholds.
+ */
+export function isSaleOverdue(
+  balance: number,
+  createdAt: string,
+  reminderDays = 7,
+  asOfDate?: Date
+): boolean {
+  if (balance <= 0) return false;
+  const days = getDaysUnpaid(createdAt, asOfDate);
+  return days >= reminderDays;
+}
+
+/**
+ * Calculates how many days past the reminder threshold a sale has been unpaid.
+ */
+export function getOverdueDays(
+  createdAt: string,
+  reminderDays = 7,
+  asOfDate?: Date
+): number {
+  const days = getDaysUnpaid(createdAt, asOfDate);
+  return Math.max(0, days - reminderDays);
+}
+
+/**
+ * Formats the overdue alert banner copy matching mockup specifications and Jira acceptance criteria.
+ */
+export function formatOverdueBannerNotice(params: {
+  balance: number;
+  createdAt: string;
+  reminderDays?: number;
+  adminMobile?: string;
+  asOfDate?: Date;
+}): { title: string; subtitle: string } | null {
+  const { balance, createdAt, reminderDays = 7, adminMobile = '0917 555 0142', asOfDate } = params;
+  if (!isSaleOverdue(balance, createdAt, reminderDays, asOfDate)) {
+    return null;
+  }
+
+  const daysUnpaid = getDaysUnpaid(createdAt, asOfDate);
+  const daysOverdue = getOverdueDays(createdAt, reminderDays, asOfDate);
+  const dayUnit = daysOverdue === 1 ? 'day' : 'days';
+
+  return {
+    title: `Overdue by ${daysOverdue} ${dayUnit} past the reminder limit.`,
+    subtitle: `Unpaid for ${daysUnpaid} days. An SMS reminder was sent to ${adminMobile}. It stops when you mark this sale as Paid.`,
+  };
 }
 
 /**
@@ -119,6 +185,8 @@ let inMemorySales: SaleTransactionDTO[] = [
     receipt_number: 'ARLQ-01041',
     customer_id: 'k1',
     customer_name: "Aling Nena's Sari-Sari Store",
+    customer_phone: '0917 301 4488',
+    customer_address: 'Purok 3, Brgy. San Roque',
     total_amount: 500,
     amount_paid: 500,
     balance: 0,
@@ -157,6 +225,8 @@ let inMemorySales: SaleTransactionDTO[] = [
     receipt_number: 'ARLQ-01063',
     customer_id: 'k2',
     customer_name: 'Mang Tonyo Carinderia',
+    customer_phone: '0928 554 1290',
+    customer_address: 'Public Market Stall 14',
     total_amount: 560,
     amount_paid: 320,
     balance: 240,
@@ -189,6 +259,57 @@ let inMemorySales: SaleTransactionDTO[] = [
     ],
     created_at: new Date('2026-10-30T00:00:00Z').toISOString(),
     updated_at: new Date('2026-10-30T00:00:00Z').toISOString(),
+  },
+  {
+    id: 's2',
+    receipt_number: 'ARLQ-01058',
+    customer_id: 'k1',
+    customer_name: "Aling Nena's Sari-Sari Store",
+    customer_phone: '0917 301 4488',
+    customer_address: 'Purok 3, Brgy. San Roque',
+    total_amount: 1340,
+    amount_paid: 0,
+    balance: 1340,
+    payment_status: 'Not Yet Paid',
+    order_status: 'Pending',
+    gross_profit: 295,
+    items: [
+      {
+        id: 'si-5',
+        sale_id: 's2',
+        variant_id: 'patis-gal',
+        product_name: 'Patis',
+        size: 'gal',
+        quantity: 2,
+        unit_price: 200,
+        unit_cost: 160,
+        created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 'si-6',
+        sale_id: 's2',
+        variant_id: 'toyo-gal',
+        product_name: 'Toyo',
+        size: 'gal',
+        quantity: 4,
+        unit_price: 160,
+        unit_cost: 125,
+        created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 'si-7',
+        sale_id: 's2',
+        variant_id: 'suka-gal',
+        product_name: 'Suka',
+        size: 'gal',
+        quantity: 3,
+        unit_price: 100,
+        unit_cost: 75,
+        created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    ],
+    created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -271,6 +392,8 @@ interface SupabaseSaleJoinRow {
   updated_at: string;
   customers?: {
     name?: string;
+    phone?: string;
+    address?: string;
   };
   sale_items?: SupabaseSaleItemJoinRow[];
 }
@@ -287,11 +410,24 @@ export class SaleService {
   }
 
   /**
-   * Retrieves all sales with associated line items.
+   * Retrieves all sales with associated line items, customer details, and overdue calculations.
    */
   async getSales(): Promise<SaleTransactionDTO[]> {
+    const settings = await getSystemSettings(this.supabase || undefined);
+    const reminderDays = settings.reminder_days || 7;
+
     if (!this.supabase) {
-      return [...inMemorySales];
+      return inMemorySales.map((s) => {
+        const daysUnpaid = getDaysUnpaid(s.created_at);
+        const overdue = isSaleOverdue(s.balance, s.created_at, reminderDays);
+        const overdueDays = getOverdueDays(s.created_at, reminderDays);
+        return {
+          ...s,
+          days_unpaid: daysUnpaid,
+          is_overdue: overdue,
+          days_overdue: overdueDays,
+        };
+      });
     }
 
     try {
@@ -308,7 +444,9 @@ export class SaleService {
           created_at,
           updated_at,
           customers (
-            name
+            name,
+            phone,
+            address
           ),
           sale_items (
             id,
@@ -329,7 +467,17 @@ export class SaleService {
         .order('created_at', { ascending: false });
 
       if (error || !sales) {
-        return [...inMemorySales];
+        return inMemorySales.map((s) => {
+          const daysUnpaid = getDaysUnpaid(s.created_at);
+          const overdue = isSaleOverdue(s.balance, s.created_at, reminderDays);
+          const overdueDays = getOverdueDays(s.created_at, reminderDays);
+          return {
+            ...s,
+            days_unpaid: daysUnpaid,
+            is_overdue: overdue,
+            days_overdue: overdueDays,
+          };
+        });
       }
 
       return (sales as unknown as SupabaseSaleJoinRow[]).map((s) => {
@@ -353,11 +501,17 @@ export class SaleService {
           0
         );
 
+        const daysUnpaid = getDaysUnpaid(s.created_at);
+        const overdue = isSaleOverdue(balance, s.created_at, reminderDays);
+        const overdueDays = getOverdueDays(s.created_at, reminderDays);
+
         return {
           id: s.id,
           receipt_number: s.receipt_number,
           customer_id: s.customer_id,
           customer_name: s.customers?.name || 'Unknown',
+          customer_phone: s.customers?.phone || '',
+          customer_address: s.customers?.address || '',
           total_amount: totalAmount,
           amount_paid: amountPaid,
           balance,
@@ -367,19 +521,188 @@ export class SaleService {
           gross_profit: grossProfit,
           created_at: s.created_at,
           updated_at: s.updated_at,
+          days_unpaid: daysUnpaid,
+          is_overdue: overdue,
+          days_overdue: overdueDays,
         };
       });
     } catch {
-      return [...inMemorySales];
+      return inMemorySales.map((s) => {
+        const daysUnpaid = getDaysUnpaid(s.created_at);
+        const overdue = isSaleOverdue(s.balance, s.created_at, reminderDays);
+        const overdueDays = getOverdueDays(s.created_at, reminderDays);
+        return {
+          ...s,
+          days_unpaid: daysUnpaid,
+          is_overdue: overdue,
+          days_overdue: overdueDays,
+        };
+      });
     }
   }
 
   /**
-   * Retrieves a single sale by ID.
+   * Retrieves a single sale by ID or Receipt Number.
    */
   async getSaleById(id: string): Promise<SaleTransactionDTO | null> {
     const list = await this.getSales();
-    return list.find((s) => s.id === id) || null;
+    const cleanId = id.trim().toLowerCase();
+    return (
+      list.find(
+        (s) => s.id.toLowerCase() === cleanId || s.receipt_number.toLowerCase() === cleanId
+      ) || null
+    );
+  }
+
+  /**
+   * Updates payment status and amount paid for a sale transaction.
+   * If Paid: sets amount_paid = total_amount, balance = 0.
+   * If Not Yet Paid: sets amount_paid = 0, balance = total_amount.
+   * If Partially Paid: validates amountPaid (0 < amountPaid < total_amount).
+   * Updates customer outstanding debt rollup.
+   */
+  async updateSalePayment(
+    saleId: string,
+    paymentStatus: PaymentStatus,
+    amountPaid?: number
+  ): Promise<{
+    success: boolean;
+    sale?: SaleTransactionDTO;
+    error?: string;
+  }> {
+    const sale = (await this.getSales()).find(
+      (s) => s.id === saleId || s.receipt_number.toLowerCase() === saleId.toLowerCase()
+    );
+
+    if (!sale) {
+      return { success: false, error: 'Sale not found' };
+    }
+
+    let newAmountPaid = 0;
+    if (paymentStatus === 'Paid') {
+      newAmountPaid = sale.total_amount;
+    } else if (paymentStatus === 'Not Yet Paid') {
+      newAmountPaid = 0;
+    } else if (paymentStatus === 'Partially Paid') {
+      const parsedAmount = Number(amountPaid);
+      if (Number.isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount >= sale.total_amount) {
+        return {
+          success: false,
+          error: `Enter an amount between ₱1 and ${formatPeso(sale.total_amount - 1)}`,
+        };
+      }
+      newAmountPaid = Math.round((parsedAmount + Number.EPSILON) * 100) / 100;
+    }
+
+    const newBalance = Math.max(0, Math.round((sale.total_amount - newAmountPaid + Number.EPSILON) * 100) / 100);
+    const nowIso = new Date().toISOString();
+
+    if (this.supabase) {
+      try {
+        const { error } = await this.supabase
+          .from('sales')
+          .update({
+            amount_paid: newAmountPaid,
+            payment_status: paymentStatus,
+            updated_at: nowIso,
+          })
+          .eq('id', sale.id);
+
+        if (error) {
+          console.warn('Failed to update sale payment in Supabase:', error);
+        }
+      } catch (err) {
+        console.warn('Supabase sale payment update failed:', err);
+      }
+    }
+
+    // Update in-memory record
+    const memoryMatch = inMemorySales.find(
+      (s) => s.id === sale.id || s.receipt_number.toLowerCase() === sale.receipt_number.toLowerCase()
+    );
+    if (memoryMatch) {
+      memoryMatch.amount_paid = newAmountPaid;
+      memoryMatch.balance = newBalance;
+      memoryMatch.payment_status = paymentStatus;
+      memoryMatch.updated_at = nowIso;
+    }
+
+    // Synchronize customer debt rollup
+    updateCustomerSalePayment(sale.id, newAmountPaid, paymentStatus, sale.customer_id, sale.total_amount);
+    updateCustomerSalePayment(sale.receipt_number, newAmountPaid, paymentStatus, sale.customer_id, sale.total_amount);
+
+    const updatedSale: SaleTransactionDTO = {
+      ...sale,
+      amount_paid: newAmountPaid,
+      balance: newBalance,
+      payment_status: paymentStatus,
+      updated_at: nowIso,
+      is_overdue: false,
+    };
+
+    return {
+      success: true,
+      sale: updatedSale,
+    };
+  }
+
+  /**
+   * Updates fulfillment order status for a sale transaction.
+   */
+  async updateSaleOrderStatus(
+    saleId: string,
+    orderStatus: OrderStatus
+  ): Promise<{
+    success: boolean;
+    sale?: SaleTransactionDTO;
+    error?: string;
+  }> {
+    const sale = (await this.getSales()).find(
+      (s) => s.id === saleId || s.receipt_number.toLowerCase() === saleId.toLowerCase()
+    );
+
+    if (!sale) {
+      return { success: false, error: 'Sale not found' };
+    }
+
+    const nowIso = new Date().toISOString();
+
+    if (this.supabase) {
+      try {
+        const { error } = await this.supabase
+          .from('sales')
+          .update({
+            order_status: orderStatus,
+            updated_at: nowIso,
+          })
+          .eq('id', sale.id);
+
+        if (error) {
+          console.warn('Failed to update sale order status in Supabase:', error);
+        }
+      } catch (err) {
+        console.warn('Supabase sale order status update failed:', err);
+      }
+    }
+
+    const memoryMatch = inMemorySales.find(
+      (s) => s.id === sale.id || s.receipt_number.toLowerCase() === sale.receipt_number.toLowerCase()
+    );
+    if (memoryMatch) {
+      memoryMatch.order_status = orderStatus;
+      memoryMatch.updated_at = nowIso;
+    }
+
+    const updatedSale: SaleTransactionDTO = {
+      ...sale,
+      order_status: orderStatus,
+      updated_at: nowIso,
+    };
+
+    return {
+      success: true,
+      sale: updatedSale,
+    };
   }
 
   /**
