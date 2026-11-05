@@ -24,13 +24,13 @@ flowchart TD
 ## Detailed Task Breakdown
 
 ### Phase 1: Contracts & Schema Validation
-- [ ] **Task 1**: Update `lib/sales/sale-contracts.ts`:
+- [x] **Task 1**: Update `lib/sales/sale-contracts.ts`:
   - Add `updateSalePaymentSchema` with Zod validation.
   - Add `updateSaleOrderStatusSchema` with Zod validation.
   - Extend `SaleTransactionDTO` with customer contact (`phone`, `address`) and optional overdue calculation properties (`days_unpaid`, `is_overdue`, `days_overdue`).
 
 ### Phase 2: Domain Logic & Service Layer
-- [ ] **Task 2**: Update `lib/sales/sale-service.ts`:
+- [x] **Task 2**: Update `lib/sales/sale-service.ts`:
   - Implement calculation helpers:
     - `getDaysUnpaid(createdAt: string, asOfDate?: Date): number`
     - `isSaleOverdue(balance: number, createdAt: string, reminderDays: number, asOfDate?: Date): boolean`
@@ -44,7 +44,7 @@ flowchart TD
     - Updates `order_status` in Supabase and memory.
 
 ### Phase 3: Unit Testing (TDD - Red Phase)
-- [ ] **Task 3**: Create unit test suite in `tests/sales-ledger-detail.test.ts` covering:
+- [x] **Task 3**: Create unit test suite in `tests/sales-ledger-detail.test.ts` covering:
   - Scenario 1: Sales ledger search and status filtering (Paid, Partially Paid, Not Yet Paid).
   - Scenario 2: Overdue calculation and alert banner text (9 days unpaid with 7 day threshold -> 2 days overdue).
   - Scenario 3: Payment status update to fully paid (₱1,340 unpaid -> amount_paid=1340, balance=0, overdue banner dismissed).
@@ -52,13 +52,13 @@ flowchart TD
   - Edge cases: Non-existent sale ID handling, partial payment bounds (`0 < amount < total`), pluralization of overdue days.
 
 ### Phase 4: Server Actions
-- [ ] **Task 4**: Add Server Actions in `lib/sales/sale-actions.ts`:
+- [x] **Task 4**: Add Server Actions in `lib/sales/sale-actions.ts`:
   - `updateSalePaymentAction(input: UpdateSalePaymentInput)`
   - `updateSaleOrderStatusAction(input: UpdateSaleOrderStatusInput)`
   - Revalidate paths: `/sales`, `/sales/[id]`, `/customers`, `/customers/[id]`, `/dashboard`.
 
 ### Phase 5: Reusable Status UI Components
-- [ ] **Task 5**: Implement UI components:
+- [x] **Task 5**: Implement UI components:
   - `SaleStatusPills` or shared status pills in `components/sales/sale-status-pill.tsx`:
     - `PaymentStatusPill`: `Paid` (`ok`), `Partially Paid` (`warn`), `Not Yet Paid` (`bad`), plus `Overdue` (`bad`).
     - `OrderStatusPill`: `Pending` (`warn`), `Delivered` (`info`), `Picked Up` (`info`).
@@ -66,7 +66,7 @@ flowchart TD
     - Danger background `bg-danger-light`, border `border-danger-border`, text `text-danger`, red dot indicator.
 
 ### Phase 6: Sales Ledger Table & Ledger Page
-- [ ] **Task 6**: Implement Sales Ledger UI:
+- [x] **Task 6**: Implement Sales Ledger UI:
   - `components/sales/sales-ledger-table.tsx`:
     - Search input for receipt / customer name.
     - Payment dropdown filter and Order dropdown filter.
@@ -76,13 +76,13 @@ flowchart TD
   - Replace placeholder in `app/(admin)/sales/page.tsx` with production Server Component.
 
 ### Phase 7: Sale Detail View & Management Cards
-- [ ] **Task 7**: Implement Sale Detail View:
+- [x] **Task 7**: Implement Sale Detail View:
   - `components/sales/sale-payment-manager.tsx`: Segmented control (`Paid`, `Partially Paid`, `Not Yet Paid`), partial payment input, "Save payment" button, toast notification, and reactive balance update.
   - `components/sales/sale-order-manager.tsx`: Segmented control (`Pending`, `Delivered`, `Picked Up`), "Save order status" button, toast notification, and reactive pill update.
   - `app/(admin)/sales/[id]/page.tsx`: Full detail view with breadcrumbs, receipt number, print button, overdue alert banner, line items table with profit footer, customer info card, payment manager, and order manager.
 
 ### Phase 8: Verification & Quality Gates
-- [ ] **Task 8**: Run full verification suite:
+- [x] **Task 8**: Run full verification suite:
   - Run `npm test` inside the worktree (all green).
   - Run `npm run typecheck` inside the worktree.
   - Run `npm run lint` inside the worktree.
