@@ -80,7 +80,7 @@ function CategoryModalForm({
             disabled={isSubmitting}
             className={`w-full bg-bg-input border ${
               error ? 'border-danger focus:border-danger' : 'border-border focus:border-border-focus'
-            } text-text-primary rounded-[var(--r)] px-3.5 py-2 text-[15px] outline-none transition-colors duration-150`}
+            } text-text-primary rounded-(--r) px-3.5 py-2 text-[15px] outline-none transition-colors duration-150`}
           />
           {error && (
             <p className="text-[13px] text-danger font-medium m-0 mt-1">
@@ -95,14 +95,14 @@ function CategoryModalForm({
           type="button"
           onClick={onClose}
           disabled={isSubmitting}
-          className="inline-flex items-center justify-center px-4 py-2 text-[14px] font-medium text-text-primary bg-secondary hover:bg-secondary-hover border border-border rounded-[var(--r)] cursor-pointer transition-colors duration-150"
+          className="inline-flex items-center justify-center px-4 py-2 text-[14px] font-medium text-text-primary bg-secondary hover:bg-secondary-hover border border-border rounded-(--r) cursor-pointer transition-colors duration-150"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center justify-center px-4 py-2 text-[14px] font-semibold text-text-light bg-primary hover:bg-primary-hover border-0 rounded-[var(--r)] cursor-pointer transition-colors duration-150 shadow-sm disabled:opacity-50"
+          className="inline-flex items-center justify-center px-4 py-2 text-[14px] font-semibold text-text-light bg-primary hover:bg-primary-hover border-0 rounded-(--r) cursor-pointer transition-colors duration-150 shadow-sm disabled:opacity-50"
         >
           {isSubmitting ? 'Saving...' : 'Save category'}
         </button>

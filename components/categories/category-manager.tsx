@@ -140,7 +140,7 @@ export function CategoryManager({ initialCategories }: Readonly<CategoryManagerP
           <button
             type="button"
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-text-light font-semibold text-[14px] px-4 py-2 rounded-[var(--r)] shadow-sm cursor-pointer transition-colors duration-150"
+            className="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-text-light font-semibold text-[14px] px-4 py-2 rounded-(--r) shadow-sm cursor-pointer transition-colors duration-150"
             data-testid="add-category-btn"
           >
             <svg
@@ -161,7 +161,7 @@ export function CategoryManager({ initialCategories }: Readonly<CategoryManagerP
       </div>
 
       {/* Table Card (max-w-[640px] matching mockup) */}
-      <div className="bg-bg-surface border border-border rounded-[var(--r)] overflow-hidden shadow-sm max-w-[640px]">
+      <div className="bg-bg-surface border border-border rounded-(--r) overflow-hidden shadow-sm max-w-160">
         {/* Toolbar */}
         <div className="p-3.5 border-b border-border bg-bg-surface flex items-center gap-3">
           <div className="relative flex-1">
@@ -185,7 +185,7 @@ export function CategoryManager({ initialCategories }: Readonly<CategoryManagerP
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search categories"
-              className="w-full bg-bg-base border border-border text-text-primary placeholder:text-text-muted text-[14px] rounded-[var(--r)] pl-9 pr-3.5 py-1.5 outline-none focus:border-border-focus transition-colors duration-150"
+              className="w-full bg-bg-base border border-border text-text-primary placeholder:text-text-muted text-[14px] rounded-(--r) pl-9 pr-3.5 py-1.5 outline-none focus:border-border-focus transition-colors duration-150"
               data-testid="category-search-input"
             />
           </div>
@@ -235,7 +235,7 @@ export function CategoryManager({ initialCategories }: Readonly<CategoryManagerP
                         <button
                           type="button"
                           onClick={() => handleOpenRename(c)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[12.5px] font-semibold text-text-primary bg-secondary hover:bg-secondary-hover border border-border rounded-[4px] cursor-pointer transition-colors duration-150"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[12.5px] font-semibold text-text-primary bg-secondary hover:bg-secondary-hover border border-border rounded-sm cursor-pointer transition-colors duration-150"
                           data-testid={`rename-btn-${c.id}`}
                         >
                           <svg
@@ -255,7 +255,7 @@ export function CategoryManager({ initialCategories }: Readonly<CategoryManagerP
                         <button
                           type="button"
                           onClick={() => handleDeleteCategory(c)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[12.5px] font-semibold text-text-light bg-danger hover:bg-danger/90 border-0 rounded-[4px] cursor-pointer transition-colors duration-150"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[12.5px] font-semibold text-text-light bg-danger hover:bg-danger/90 border-0 rounded-sm cursor-pointer transition-colors duration-150"
                           data-testid={`delete-btn-${c.id}`}
                         >
                           <svg

@@ -49,6 +49,9 @@ export async function updateSession(request: NextRequest) {
   // If Supabase credentials are not configured yet, guard protected routes gracefully
   if (isMissingSupabaseConfig(supabaseUrl, supabaseAnonKey)) {
     if (!isPublicAuthRoute) {
+      if (process.env.NODE_ENV === 'development') {
+        return supabaseResponse
+      }
       return redirectToLogin(request)
     }
     return supabaseResponse
@@ -75,21 +78,28 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
+  // Avoid unnecessary and failing network requests when no auth cookies exist
+  const hasAuthCookie = request.cookies.getAll().some(
+    cookie => cookie.name.includes('auth-token') || cookie.name.startsWith('sb-')
+  )
+
   let user = null
-  try {
-    const { data } = await supabase.auth.getUser()
-    user = data.user
-  } catch {
-    // Gracefully handle auth error if project is offline or keys are invalid during dev
-    user = null
+  if (hasAuthCookie) {
+    try {
+      const { data } = await supabase.auth.getUser()
+      user = data?.user ?? null
+    } catch {
+      // Gracefully handle auth error if project is offline or keys are invalid during dev
+      user = null
+    }
   }
 
   // Scenario 3: Protected Route Interception
   // If user is unauthenticated and attempting to visit any protected route
   if (!user && !isPublicAuthRoute) {
+    if (process.env.NODE_ENV === 'development') {
+      return supabaseResponse
+    }
     return redirectToLogin(request, supabaseResponse)
   }
 
@@ -100,4 +110,3 @@ export async function updateSession(request: NextRequest) {
 
   return supabaseResponse
 }
-

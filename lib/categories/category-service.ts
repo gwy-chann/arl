@@ -9,10 +9,10 @@ import type {
 
 import {
   validateCategoryName,
-  getDeleteCategoryPrompt,
+  
 } from '../../specs/005-product-category-management/contracts/category-contracts.ts';
 
-export { validateCategoryName, getDeleteCategoryPrompt };
+export { validateCategoryName,  };
 export type {
   Category,
   CategoryWithProductCount,
@@ -69,15 +69,15 @@ const INITIAL_PRODUCTS: MockProduct[] = [
   { id: 'p9', name: 'Patis 1 gal', category_id: 'cat-3' },
 ];
 
-let inMemoryCategories: Category[] = JSON.parse(JSON.stringify(INITIAL_CATEGORIES));
-let inMemoryProducts: MockProduct[] = JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
+let inMemoryCategories: Category[] = structuredClone(INITIAL_CATEGORIES);
+let inMemoryProducts: MockProduct[] = structuredClone(INITIAL_PRODUCTS);
 
 /**
  * Resets the in-memory data store to baseline seed state (used by test suites).
  */
 export function resetCategoryStore(): void {
-  inMemoryCategories = JSON.parse(JSON.stringify(INITIAL_CATEGORIES));
-  inMemoryProducts = JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
+  inMemoryCategories = structuredClone(INITIAL_CATEGORIES);
+  inMemoryProducts = structuredClone(INITIAL_PRODUCTS);
 }
 
 /**
@@ -300,3 +300,4 @@ export async function deleteCategory(
     orphanedProductCount: linkedCount,
   };
 }
+export {getDeleteCategoryPrompt} from '../../specs/005-product-category-management/contracts/category-contracts.ts';
