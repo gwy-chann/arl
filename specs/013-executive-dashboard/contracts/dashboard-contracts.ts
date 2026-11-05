@@ -35,7 +35,7 @@ export interface StockMatrixCellDTO {
 export interface StockMatrixRowDTO {
   product_id: string;
   product_name: string;
-  category_name?: string;
+  category_name?: string | null;
   variants: StockMatrixCellDTO[];
 }
 
