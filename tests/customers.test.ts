@@ -186,9 +186,22 @@ describe('Feature ARL-9: Customer Directory with Contact Book & Balance Rollup',
         'Must contain text-text-muted class for zero debt'
       );
     });
+
+    it('formats peso amounts consistently with two decimal places', () => {
+      assert.strictEqual(formatPeso(1340), '₱1,340.00');
+      assert.strictEqual(formatPeso(0), '₱0.00');
+    });
   });
 
   describe('Balance Rollup & Aggregation Logic', () => {
+    it('fetches full customer directory with seeded rollups', async () => {
+      const dir = await getCustomerDirectory();
+      assert.ok(dir.length >= 8);
+      const nena = dir.find((c) => c.id === 'k1');
+      assert.ok(nena);
+      assert.strictEqual(nena.debt_balance, 1340);
+      assert.strictEqual(nena.purchase_count, 4);
+    });
     it('calculates balance across multiple sales accurately', () => {
       const sales = [
         { total_amount: 500, amount_paid: 500 }, // paid (0)
