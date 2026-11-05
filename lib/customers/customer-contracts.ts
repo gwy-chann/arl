@@ -61,3 +61,28 @@ export interface CustomerActionResult {
   error?: string;
   fieldErrors?: Record<string, string[]>;
 }
+
+export type DebtStatus = 'Overdue' | 'Not yet due';
+
+export interface CustomerUtangRowDTO {
+  customer_id: string;
+  customer_name: string;
+  phone: string;
+  oldest_sale_id: string;
+  oldest_receipt_number: string;
+  oldest_sale_date: string;
+  days_outstanding: number;
+  total_balance: number;
+  is_overdue: boolean;
+  status: DebtStatus;
+}
+
+export interface CustomerUtangSummaryDTO {
+  rows: CustomerUtangRowDTO[];
+  total_owed: number;
+  total_debtors: number;
+  overdue_owed: number;
+  overdue_debtors: number;
+  reminder_days: number;
+  admin_mobile: string;
+}
