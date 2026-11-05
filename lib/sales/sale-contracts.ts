@@ -28,6 +28,19 @@ export const createSaleInputSchema = z.object({
 });
 export type CreateSaleInput = z.infer<typeof createSaleInputSchema>;
 
+export const updateSalePaymentSchema = z.object({
+  saleId: z.string().min(1, 'Sale ID is required'),
+  paymentStatus: PaymentStatusEnum,
+  amountPaid: z.number().min(0, 'Amount paid cannot be negative').optional(),
+});
+export type UpdateSalePaymentInput = z.infer<typeof updateSalePaymentSchema>;
+
+export const updateSaleOrderStatusSchema = z.object({
+  saleId: z.string().min(1, 'Sale ID is required'),
+  orderStatus: OrderStatusEnum,
+});
+export type UpdateSaleOrderStatusInput = z.infer<typeof updateSaleOrderStatusSchema>;
+
 export interface SaleLineItemDTO {
   id: string;
   sale_id: string;
@@ -45,6 +58,8 @@ export interface SaleTransactionDTO {
   receipt_number: string;
   customer_id: string;
   customer_name?: string;
+  customer_phone?: string;
+  customer_address?: string;
   total_amount: number;
   amount_paid: number;
   balance: number;
@@ -54,6 +69,9 @@ export interface SaleTransactionDTO {
   gross_profit: number;
   created_at: string;
   updated_at: string;
+  days_unpaid?: number;
+  is_overdue?: boolean;
+  days_overdue?: number;
 }
 
 export interface SaleCalculationSummary {
