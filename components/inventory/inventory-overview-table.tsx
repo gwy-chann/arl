@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { InventoryTabs } from './inventory-tabs.ts';
+import { InventoryTabs } from './inventory-tabs';
 import type { VariantStockOption } from '@/lib/inventory/stock-service';
 
 export interface OverviewVariantItem extends VariantStockOption {

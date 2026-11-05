@@ -3,7 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { InventoryTabs } from './inventory-tabs.ts';
+import { InventoryTabs } from './inventory-tabs';
 import { useToast } from '@/components/ui/toast-provider';
 import {
   STOCK_IN_REASONS,

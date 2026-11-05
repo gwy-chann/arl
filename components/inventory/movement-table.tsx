@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { InventoryTabs } from './inventory-tabs.ts';
+import { InventoryTabs } from './inventory-tabs';
 import type { StockMovementDisplayItem } from '@/lib/inventory/stock-contracts';
 
 interface MovementTableProps {
