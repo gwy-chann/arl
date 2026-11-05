@@ -820,5 +820,16 @@ h1, h2, h3, h4, h5, h6, strong, b {
   .receipt .rh {
     border-color: #cccccc !important;
   }
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  th, td {
+    color: #000000 !important;
+    border-color: #e5e7eb !important;
+  }
+  tr {
+    break-inside: avoid !important;
+  }
 }
 
