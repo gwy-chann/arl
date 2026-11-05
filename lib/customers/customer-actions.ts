@@ -7,6 +7,7 @@ import {
   type CustomerWithRollup,
   type CustomerProfileData,
   type CustomerActionResult,
+  type CustomerUtangSummaryDTO,
 } from './customer-contracts.ts';
 import {
   createCustomer,
@@ -14,6 +15,7 @@ import {
   getCustomerDirectory,
   getCustomerById,
   validateCustomerInput,
+  getCustomerUtangSummary,
 } from './customer-service.ts';
 
 function getErrorMessage(err: unknown): string {
@@ -41,6 +43,11 @@ export async function getCustomerByIdAction(
 ): Promise<CustomerProfileData | null> {
   const supabase = await getSafeSupabaseClient();
   return await getCustomerById(id, supabase);
+}
+
+export async function getCustomerUtangSummaryAction(): Promise<CustomerUtangSummaryDTO> {
+  const supabase = await getSafeSupabaseClient();
+  return await getCustomerUtangSummary(supabase);
 }
 
 export async function createCustomerAction(

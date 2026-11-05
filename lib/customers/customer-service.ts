@@ -5,7 +5,11 @@ import {
   type CustomerProfileData,
   type CustomerWithRollup,
   type SaleSummary,
+  type CustomerUtangRowDTO,
+  type CustomerUtangSummaryDTO,
+  type DebtStatus,
 } from './customer-contracts.ts';
+import { getSystemSettings } from '../settings/settings-service.ts';
 
 export function formatPeso(amount: number): string {
   return (
@@ -264,7 +268,7 @@ const INITIAL_SALES: SaleSummary[] = [
     balance: 150,
     payment_status: 'Partially Paid',
     order_status: 'Pending',
-    created_at: '2026-10-20T14:00:00Z',
+    created_at: '2026-10-07T12:00:00Z',
   },
   {
     id: 's10',
@@ -276,6 +280,17 @@ const INITIAL_SALES: SaleSummary[] = [
     payment_status: 'Partially Paid',
     order_status: 'Delivered',
     created_at: '2026-10-25T15:30:00Z',
+  },
+  {
+    id: 's11',
+    receipt_number: 'ARLQ-01064',
+    customer_id: 'k8',
+    total_amount: 500,
+    amount_paid: 300,
+    balance: 200,
+    payment_status: 'Partially Paid',
+    order_status: 'Delivered',
+    created_at: '2026-11-03T12:00:00Z',
   },
 ];
 
@@ -601,4 +616,147 @@ export async function updateCustomer(
   };
   memoryCustomers[idx] = updated;
   return updated;
+}
+
+export interface CustomerUtangCalculationOptions {
+  reminderDays?: number;
+  adminMobile?: string;
+  asOfDate?: Date;
+}
+
+/**
+ * Pure calculation function that produces ranked debtor customers and KPI rollups.
+ * Customers are sorted descending by the age of their oldest unpaid sale.
+ */
+export function calculateCustomerUtangSummary(
+  customers: CustomerWithRollup[],
+  sales: SaleSummary[],
+  options: CustomerUtangCalculationOptions = {}
+): CustomerUtangSummaryDTO {
+  const reminderDays = options.reminderDays ?? 7;
+  const adminMobile = options.adminMobile ?? '0917 555 0142';
+  const asOfDate = options.asOfDate ?? new Date();
+
+  const rows: CustomerUtangRowDTO[] = [];
+
+  for (const customer of customers) {
+    const customerUnpaidSales = sales.filter(
+      (s) => s.customer_id === customer.id && s.balance > 0
+    );
+
+    if (customerUnpaidSales.length === 0) {
+      continue;
+    }
+
+    const totalBalance = customerUnpaidSales.reduce(
+      (acc, s) => acc + s.balance,
+      0
+    );
+
+    // Find the oldest unpaid sale (highest days_outstanding)
+    let oldestSale = customerUnpaidSales[0];
+    let maxDays = getDaysOutstanding(oldestSale.created_at, asOfDate);
+
+    for (let i = 1; i < customerUnpaidSales.length; i++) {
+      const sale = customerUnpaidSales[i];
+      const days = getDaysOutstanding(sale.created_at, asOfDate);
+      if (days > maxDays) {
+        maxDays = days;
+        oldestSale = sale;
+      }
+    }
+
+    const isOverdue = maxDays >= reminderDays;
+    const status: DebtStatus = isOverdue ? 'Overdue' : 'Not yet due';
+
+    rows.push({
+      customer_id: customer.id,
+      customer_name: customer.name,
+      phone: customer.phone,
+      oldest_sale_id: oldestSale.id,
+      oldest_receipt_number: oldestSale.receipt_number,
+      oldest_sale_date: oldestSale.created_at,
+      days_outstanding: maxDays,
+      total_balance: totalBalance,
+      is_overdue: isOverdue,
+      status,
+    });
+  }
+
+  // Sort descending by oldest unpaid sale age (highest days_outstanding first)
+  rows.sort((a, b) => {
+    if (b.days_outstanding !== a.days_outstanding) {
+      return b.days_outstanding - a.days_outstanding;
+    }
+    return b.total_balance - a.total_balance;
+  });
+
+  const overdueRows = rows.filter((r) => r.is_overdue);
+  const totalOwed = rows.reduce((acc, r) => acc + r.total_balance, 0);
+  const overdueOwed = overdueRows.reduce((acc, r) => acc + r.total_balance, 0);
+
+  return {
+    rows,
+    total_owed: totalOwed,
+    total_debtors: rows.length,
+    overdue_owed: overdueOwed,
+    overdue_debtors: overdueRows.length,
+    reminder_days: reminderDays,
+    admin_mobile: adminMobile,
+  };
+}
+
+/**
+ * Retrieves the full customer utang summary with live/persisted data or seeded fallbacks.
+ */
+export async function getCustomerUtangSummary(
+  supabase?: SupabaseClient | null,
+  asOfDate?: Date
+): Promise<CustomerUtangSummaryDTO> {
+  let reminderDays = 7;
+  let adminMobile = '0917 555 0142';
+
+  try {
+    const settings = await getSystemSettings(supabase || undefined);
+    if (settings) {
+      reminderDays = settings.reminder_days;
+      adminMobile = settings.admin_mobile;
+    }
+  } catch {
+    // Fallback to default reminder settings
+  }
+
+  const customers = await getCustomerDirectory(supabase);
+
+  let sales: SaleSummary[] = [];
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.from('sales').select('*');
+      if (!error && data && data.length > 0) {
+        sales = data.map((s: any) => ({
+          id: s.id,
+          receipt_number: s.receipt_number,
+          customer_id: s.customer_id,
+          total_amount: Number(s.total_amount),
+          amount_paid: Number(s.amount_paid),
+          balance: Number(s.balance),
+          payment_status: s.payment_status,
+          order_status: s.order_status,
+          created_at: s.created_at,
+        }));
+      } else {
+        sales = [...memorySales];
+      }
+    } catch {
+      sales = [...memorySales];
+    }
+  } else {
+    sales = [...memorySales];
+  }
+
+  return calculateCustomerUtangSummary(customers, sales, {
+    reminderDays,
+    adminMobile,
+    asOfDate,
+  });
 }
