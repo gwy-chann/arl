@@ -10,9 +10,9 @@ node_modules/
 
 # Next.js & Build Outputs
 .next/
-out/
-build/
-dist/
+/out/
+/build/
+/dist/
 .turbo/
 
 # Testing & Coverage
