@@ -5,7 +5,7 @@ import { z } from 'zod';
  */
 export const reminderSettingsSchema = z.object({
   reminder_days: z
-    .number({ invalid_type_error: 'Reminder threshold must be a valid number' })
+    .number()
     .int('Reminder days must be an integer')
     .min(1, 'Reminder threshold must be at least 1 day'),
   admin_mobile: z
@@ -32,7 +32,7 @@ export interface SystemSettingsDTO {
 export const variantMinStockItemSchema = z.object({
   variant_id: z.string().min(1, 'Variant ID is required'),
   min_stock_level: z
-    .number({ invalid_type_error: 'Minimum stock must be a number' })
+    .number()
     .int('Minimum stock must be an integer')
     .min(0, 'Minimum stock cannot be negative'),
 });
