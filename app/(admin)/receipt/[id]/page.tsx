@@ -1,10 +1,13 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { SaleService } from '@/lib/sales/sale-service';
 import { toReceiptSnapshot } from '@/lib/receipt/receipt-service';
 import { ReceiptView } from '@/components/receipt/receipt-view';
 import { ReceiptPrintButton } from '@/components/receipt/receipt-print-button';
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: 'Receipt Preview | ARLQ Food Condiments Trading',
@@ -16,6 +19,7 @@ interface ReceiptPageProps {
 }
 
 export default async function ReceiptPage({ params }: Readonly<ReceiptPageProps>) {
+  await connection();
   const { id } = await params;
   const supabase = await createClient();
   const saleService = new SaleService(supabase);
