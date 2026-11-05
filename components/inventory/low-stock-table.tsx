@@ -33,7 +33,7 @@ export function LowStockTable({ initialVariants }: Readonly<LowStockTableProps>)
       <InventoryTabs activeTab="low" />
 
       {/* Main Table Card */}
-      <div className="card bg-bg-surface border border-border rounded-[var(--r)] shadow-xs overflow-hidden">
+      <div className="card bg-bg-surface border border-border rounded-(--r) shadow-xs overflow-hidden">
         <div className="tbl-wrap overflow-x-auto">
           {lowVariants.length === 0 ? (
             <div className="px-6 py-12 text-center">
@@ -109,7 +109,7 @@ export function LowStockTable({ initialVariants }: Readonly<LowStockTableProps>)
                       <td className="px-4 py-3.5 text-right whitespace-nowrap">
                         <Link
                           href={`/inventory/in?v=${v.id}`}
-                          className="btn sm inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-[var(--r)] bg-primary hover:bg-primary-hover text-text-light transition-colors"
+                          className="btn sm inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-(--r) bg-primary hover:bg-primary-hover text-text-light transition-colors"
                         >
                           Stock in
                         </Link>
