@@ -1,13 +1,19 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { connection } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { DashboardService } from '@/lib/dashboard/dashboard-service';
+import { DashboardHeader } from '@/components/dashboard/dashboard-header';
+import { DashboardKpiCards } from '@/components/dashboard/dashboard-kpi-cards';
+import { DashboardSalesChart } from '@/components/dashboard/dashboard-sales-chart';
+import { DashboardStockMatrix } from '@/components/dashboard/dashboard-stock-matrix';
+import { DashboardUrgentNotices } from '@/components/dashboard/dashboard-urgent-notices';
+import { DashboardDebtRanking } from '@/components/dashboard/dashboard-debt-ranking';
 
 export const instant = false;
 
 export const metadata = {
   title: 'Dashboard · ARLQ',
-  description: 'Administrator dashboard for ARLQ inventory and sales system',
+  description: 'Executive dashboard with business KPIs, sales charts, inventory matrix, and urgent notices',
 };
 
 interface AdminUserMetadata {
@@ -24,12 +30,15 @@ export default async function DashboardPage() {
     user_metadata?: AdminUserMetadata;
   } | null = null;
 
+  let supabaseClient = null;
+
   try {
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getUser();
+    supabaseClient = await createClient();
+    const { data } = await supabaseClient.auth.getUser();
     user = data?.user ?? null;
   } catch {
     user = null;
+    supabaseClient = null;
   }
 
   // Graceful fallback for local development when Supabase container is offline
@@ -38,7 +47,7 @@ export default async function DashboardPage() {
       id: 'dev-admin',
       email: 'admin@arlq.com',
       user_metadata: {
-        name: 'Administrator',
+        name: 'Admin',
         role: 'Owner account',
       },
     };
@@ -48,57 +57,33 @@ export default async function DashboardPage() {
     redirect('/login?redirectTo=/dashboard');
   }
 
+  const dashboardService = new DashboardService(supabaseClient);
+  const data = await dashboardService.getDashboardData();
+
   return (
-    <div className="max-w-5xl">
-      {/* Header Bar */}
-      <div className="pb-6 mb-8 border-b border-border">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-text-primary">
-          ARLQ Dashboard
-        </h1>
-        <p className="text-sm text-text-muted mt-1">
-          Signed in as <span className="font-semibold text-text-secondary">{user.email}</span>
-        </p>
-      </div>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* 1. Header with Greetings & Action Triggers */}
+      <DashboardHeader adminName={user?.user_metadata?.name || 'Admin'} />
 
-      {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-bg-surface border border-border rounded-xl p-6 shadow-xs">
-          <div className="text-sm font-semibold text-text-muted mb-1">Session Status</div>
-          <div className="text-xl font-bold text-success flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-success"></span>
-            Active Session
-          </div>
-          <p className="text-xs text-text-muted mt-3">
-            Protected by Supabase SSR HTTP-only session cookies.
-          </p>
+      {/* 2. Top-Level Executive KPI Metric Cards */}
+      <DashboardKpiCards kpis={data.kpis} />
+
+      {/* 3. Responsive 2-Column Dashboard Grid */}
+      <div className="dash-grid">
+        <div className="stack">
+          {/* Notifications / Urgent Action Stream */}
+          <DashboardUrgentNotices notices={data.notices} />
+
+          {/* 7-Day Rolling Sales Visualizer Bar Chart */}
+          <DashboardSalesChart chart={data.sales_chart} />
         </div>
 
-        <div className="bg-bg-surface border border-border rounded-xl p-6 shadow-xs">
-          <div className="text-sm font-semibold text-text-muted mb-1">Role & Permissions</div>
-          <div className="text-xl font-bold text-text-primary">
-            Store Administrator
-          </div>
-          <p className="text-xs text-text-muted mt-3">
-            Full administrative access to inventory, sales, and settings.
-          </p>
-        </div>
+        <div className="stack">
+          {/* 3x3 Stock On Hand Matrix */}
+          <DashboardStockMatrix matrix={data.stock_matrix} />
 
-        <div className="bg-bg-surface border border-border rounded-xl p-6 shadow-xs">
-          <div className="text-sm font-semibold text-text-muted mb-1">Quick Links</div>
-          <div className="flex flex-col gap-2 mt-2">
-            <Link
-              href="/products/categories"
-              className="text-sm text-primary hover:underline font-semibold flex items-center gap-1"
-            >
-              🏷️ Product Categories (ARL-7) →
-            </Link>
-            <Link
-              href="/settings/appearance"
-              className="text-sm text-primary hover:underline font-medium"
-            >
-              Theme & Appearance Settings →
-            </Link>
-          </div>
+          {/* Top 5 Debtor Ranking ("Who owes you") */}
+          <DashboardDebtRanking ranking={data.debt_ranking} />
         </div>
       </div>
     </div>
