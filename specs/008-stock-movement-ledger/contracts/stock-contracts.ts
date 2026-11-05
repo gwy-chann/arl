@@ -26,14 +26,14 @@ export const stockMovementInputSchema = z.object({
   variant_id: z.string().min(1, 'Please select a product variant'),
   movement_type: z.enum(['In', 'Out']),
   quantity: z
-    .number({ invalid_type_error: 'Quantity must be a valid number' })
+    .number()
     .int('Quantity must be an integer')
     .min(1, 'Quantity must be at least 1'),
   reason: z.string().min(1, 'Please select a reason or source'),
-  note: z.string().trim().default(''),
+  note: z.string().trim().optional().default(''),
 });
 
-export type StockMovementInput = z.infer<typeof stockMovementInputSchema>;
+export type StockMovementInput = z.input<typeof stockMovementInputSchema>;
 
 export interface StockMovementDTO {
   id: string;
