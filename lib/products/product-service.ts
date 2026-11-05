@@ -1,9 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  PRODUCT_SIZES,
   computeUnitProfit,
   productInputSchema,
-  variantInputSchema,
   type ProductSizeKey,
   type ProductVariantDTO,
   type ProductWithVariants,

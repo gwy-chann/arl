@@ -1,7 +1,6 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PRODUCT_SIZES,
   getSizeLabel,
   formatPeso,
   computeUnitProfit,
@@ -140,8 +139,15 @@ describe('Feature ARL-8: Multi-Variant Product Catalog & Pricing Engine', () => 
 
       assert.equal(result.success, false, 'Validation must fail for negative selling price');
       if (!result.success) {
-        const issues = result.error.issues || (result.error as any).errors || [];
-        const error = issues.find((e: any) => e.path.includes('selling_price') || e.origin === 'number');
+        interface IssueLike {
+          path?: (string | number)[];
+          origin?: string;
+          message: string;
+        }
+        const issues: IssueLike[] = (result.error.issues || []) as IssueLike[];
+        const error = issues.find(
+          (e) => (e.path && e.path.includes('selling_price')) || e.origin === 'number'
+        );
         assert.ok(error, 'Must report error on selling_price');
         assert.match(error.message, /(greater than or equal to 0|>=0|too small)/i);
       }
