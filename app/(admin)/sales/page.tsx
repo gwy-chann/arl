@@ -1,8 +1,11 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { SaleService } from '@/lib/sales/sale-service';
 import { SalesLedgerTable } from '@/components/sales/sales-ledger-table';
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: 'Sales | ARLQ Food Condiments Trading',
@@ -10,6 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function SalesPage() {
+  await connection();
   const supabase = await createClient();
   const saleService = new SaleService(supabase);
   const sales = await saleService.getSales();
