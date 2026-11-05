@@ -33,7 +33,7 @@ export function InventoryTabs({ activeTab }: Readonly<InventoryTabsProps>) {
             role="tab"
             aria-selected={isActive}
             className={`
-              px-4 py-2.5 text-[15px] whitespace-nowrap transition-colors duration-150 leading-[1.4] -mb-[1px]
+              px-4 py-2.5 text-[15px] whitespace-nowrap transition-colors duration-150 leading-[1.4] -mb-px
               ${
                 isActive
                   ? 'on text-primary border-b-2 border-primary font-semibold'
