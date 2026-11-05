@@ -24,13 +24,13 @@ flowchart TD
 ## Detailed Task Breakdown
 
 ### Phase 1: Contracts & Data Models
-- [ ] **Task 1** [P] [US1] Define receipt contracts and schemas in `lib/receipt/receipt-contracts.ts`:
+- [x] **Task 1** [P] [US1] Define receipt contracts and schemas in `lib/receipt/receipt-contracts.ts`:
   - `ReceiptItemSchema` and `ReceiptItem` type (`variant_label`, `product_name`, `packaging_size`, `quantity`, `unit_price`, `line_total`).
   - `ReceiptPaymentStatusSchema` (`PAID`, `PARTIALLY PAID`, `NOT YET PAID`).
   - `ReceiptSnapshotSchema` and `ReceiptSnapshot` interface.
 
 ### Phase 2: Domain Logic & Transformation Service
-- [ ] **Task 2** [US1] Implement receipt domain transformation in `lib/receipt/receipt-service.ts`:
+- [x] **Task 2** [US1] Implement receipt domain transformation in `lib/receipt/receipt-service.ts`:
   - `formatReceiptDate(isoString: string): string` (formats to `Oct 11, 2026`).
   - `getReceiptPaymentStatus(amountPaid: number, balance: number): ReceiptPaymentStatus` (`PAID`, `PARTIALLY PAID`, `NOT YET PAID`).
   - `toReceiptSnapshot(sale: SaleDetail): ReceiptSnapshot`:
@@ -39,7 +39,7 @@ flowchart TD
     - Computes formatted date, totals, amount paid, balance, and payment status stamp.
 
 ### Phase 3: Unit Testing (TDD - Red Phase)
-- [ ] **Task 3** [US1] Create unit test suite in `tests/receipt.test.ts`:
+- [x] **Task 3** [US1] Create unit test suite in `tests/receipt.test.ts`:
   - Scenario 1: Thermal receipt content formatting (header, receipt number, date, customer name, items, totals).
   - Scenario 2: Payment status stamp classification:
     - Fully paid sale (`balance == 0`) -> `PAID`.
@@ -50,7 +50,7 @@ flowchart TD
   - Scenario 5: Missing or invalid sale fallback.
 
 ### Phase 4: Monospace Thermal Receipt UI Component
-- [ ] **Task 4** [P] [US1] Create `components/receipt/receipt-view.tsx`:
+- [x] **Task 4** [P] [US1] Create `components/receipt/receipt-view.tsx`:
   - Centered thermal paper card layout (`max-w-[400px]`, `w-full`, `font-mono`).
   - Header: **ARLQ Food Condiments Trading** / `Official Receipt` with dashed border.
   - Metadata: Receipt no., Date, Customer name.
@@ -62,21 +62,21 @@ flowchart TD
   - Pure semantic design tokens, zero hardcoded hex/RGB colors.
 
 ### Phase 5: Client Print Action Button
-- [ ] **Task 5** [P] [US1] Create `components/receipt/receipt-print-button.tsx`:
+- [x] **Task 5** [P] [US1] Create `components/receipt/receipt-print-button.tsx`:
   - Client component (`'use client'`).
   - Printer SVG icon.
   - Primary button styling (`bg-primary text-text-light hover:bg-primary-hover`).
   - `onClick={() => window.print()}`.
 
 ### Phase 6: Print Stylesheet Formatting
-- [ ] **Task 6** [US1] Add `@media print` rules in `app/globals.css`:
+- [x] **Task 6** [US1] Add `@media print` rules in `app/globals.css`:
   - Sets pure white background and pure black typography.
   - Hides admin shell: `.sidebar`, `.topbar`, `.page-head`, `nav[aria-label="Breadcrumb"]`, `.no-print`, `.toasts`, action buttons.
   - Resets `.receipt-wrap` and `.receipt` to full width with zero shadows, zero outer padding, and crisp printable borders.
   - Prevents page breaks inside `.receipt-item` rows (`break-inside: avoid`).
 
 ### Phase 7: Receipt Preview Route
-- [ ] **Task 7** [US1] Implement `app/(admin)/receipt/[id]/page.tsx`:
+- [x] **Task 7** [US1] Implement `app/(admin)/receipt/[id]/page.tsx`:
   - Server Component with metadata `Receipt Preview | ARLQ Food Condiments Trading`.
   - Authenticated via `(admin)/layout.tsx`.
   - Fetches sale by ID via `SaleService.getSaleById(id)`.
@@ -86,7 +86,7 @@ flowchart TD
   - Renders `ReceiptView` inside receipt wrapper.
 
 ### Phase 8: Verification & Convergence
-- [ ] **Task 8** Execute full test suite, typecheck, lint, and Graphify sync:
+- [x] **Task 8** Execute full test suite, typecheck, lint, and Graphify sync:
   - Run `npm test` inside the worktree (all tests passing).
   - Run `npx tsc --noEmit` inside the worktree (zero errors).
   - Run `npm run lint` inside the worktree (zero warnings/errors).
