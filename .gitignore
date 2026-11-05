@@ -1,7 +1,5 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
+# Dependencies
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -10,37 +8,68 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# Next.js & Build Outputs
+.next/
+out/
+build/
+dist/
+.turbo/
 
-# next.js
-/.next/
-/out/
+# Testing & Coverage
+coverage/
+*.lcov
+.nyc_output/
 
-# production
-/build
+# Supabase Local Development
+supabase/.branches/
+supabase/.temp/
+.supabase/
 
-# misc
-.DS_Store
+# Environment Files & Secrets (keep examples committed)
+.env*
+!.env.example
+!.env.template
 *.pem
+*.key
+*.cert
 
-# debug
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Git Worktrees
+.worktrees/
+
+# Debug & Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
-.env*
-!.env.example
+# Vercel
+.vercel/
 
+# IDEs & Editors
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*~
 
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# git worktrees
-.worktrees/
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
