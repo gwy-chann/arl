@@ -3,14 +3,17 @@
 import React from 'react';
 import Link from 'next/link';
 import type { CustomerProfileData } from '@/lib/customers/customer-contracts';
-import { formatPeso, formatCustomerBalance } from '@/lib/customers/customer-service';
+import {
+  formatPeso,
+  getDaysOutstanding,
+  isSaleOverdue,
+} from '@/lib/customers/customer-service';
 
 interface CustomerProfileProps {
   customer: CustomerProfileData;
 }
 
 export function CustomerProfile({ customer }: Readonly<CustomerProfileProps>) {
-  const bal = formatCustomerBalance(customer.debt_balance);
   const unpaidSales = customer.sales.filter((s) => s.balance > 0);
 
   return (
@@ -140,12 +143,19 @@ export function CustomerProfile({ customer }: Readonly<CustomerProfileProps>) {
                         year: 'numeric',
                       }
                     );
-                    const sbal = formatCustomerBalance(sale.balance);
 
                     return (
-                      <tr key={sale.id} className="hover:bg-bg-hover transition-colors">
+                      <tr
+                        key={sale.id}
+                        className="hover:bg-bg-hover transition-colors group cursor-pointer"
+                      >
                         <td className="px-4 py-3 font-semibold text-text-primary">
-                          {sale.receipt_number}
+                          <Link
+                            href={`/sales/${sale.id}`}
+                            className="hover:text-primary transition-colors underline-offset-2 group-hover:underline"
+                          >
+                            {sale.receipt_number}
+                          </Link>
                         </td>
                         <td className="px-4 py-3 text-text-secondary whitespace-nowrap">
                           {dateFormatted}
@@ -154,20 +164,22 @@ export function CustomerProfile({ customer }: Readonly<CustomerProfileProps>) {
                           {formatPeso(sale.total_amount)}
                         </td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">
-                          {sbal.isIndebted ? (
-                            <b className="text-danger font-semibold">{sbal.formatted}</b>
+                          {sale.balance > 0 ? (
+                            <b className="text-danger font-semibold">
+                              {formatPeso(sale.balance)}
+                            </b>
                           ) : (
                             <span className="text-text-muted">-</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-flex px-2 py-0.5 text-[12px] font-semibold rounded-full ${
+                            className={`inline-flex px-2 py-0.5 text-[12px] font-semibold rounded-full border ${
                               sale.payment_status === 'Paid'
-                                ? 'bg-success-light text-success'
+                                ? 'bg-success-light text-success border-success-border'
                                 : sale.payment_status === 'Partially Paid'
-                                ? 'bg-accent-light text-accent'
-                                : 'bg-danger-light text-danger'
+                                ? 'bg-accent-light text-accent border-accent-border'
+                                : 'bg-danger-light text-danger border-danger-border'
                             }`}
                           >
                             {sale.payment_status}
@@ -175,10 +187,12 @@ export function CustomerProfile({ customer }: Readonly<CustomerProfileProps>) {
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-flex px-2 py-0.5 text-[12px] font-semibold rounded-full ${
+                            className={`inline-flex px-2 py-0.5 text-[12px] font-semibold rounded-full border ${
                               sale.order_status === 'Pending'
-                                ? 'bg-accent-light text-accent'
-                                : 'bg-info-light text-info'
+                                ? 'bg-accent-light text-accent border-accent-border'
+                                : sale.order_status === 'Delivered'
+                                ? 'bg-success-light text-success border-success-border'
+                                : 'bg-info-light text-info border-info-border'
                             }`}
                           >
                             {sale.order_status}
@@ -203,7 +217,7 @@ export function CustomerProfile({ customer }: Readonly<CustomerProfileProps>) {
           <div className="p-5">
             <div
               className={`text-[30px] font-bold tracking-tight ${
-                bal.isIndebted ? 'text-danger' : 'text-text-primary'
+                customer.debt_balance > 0 ? 'text-danger' : 'text-text-primary'
               }`}
             >
               {formatPeso(customer.debt_balance)}
@@ -213,22 +227,42 @@ export function CustomerProfile({ customer }: Readonly<CustomerProfileProps>) {
               <div className="mt-2">
                 <p className="text-[13px] text-text-muted mb-3">
                   Across {unpaidSales.length}{' '}
-                  {unpaidSales.length > 1 ? 'unpaid sales' : 'unpaid sale'}.
+                  {unpaidSales.length === 1 ? 'unpaid sale' : 'unpaid sales'}.
                 </p>
                 <div className="space-y-2 border-t border-border pt-3">
-                  {unpaidSales.map((sale) => (
-                    <div
-                      key={sale.id}
-                      className="flex items-center justify-between text-[13.5px] py-1 border-b border-border/50 last:border-0"
-                    >
-                      <span className="font-medium text-text-primary">
-                        {sale.receipt_number}
-                      </span>
-                      <span className="font-semibold text-danger">
-                        {formatPeso(sale.balance)}
-                      </span>
-                    </div>
-                  ))}
+                  {unpaidSales.map((sale) => {
+                    const days =
+                      sale.days_outstanding ?? getDaysOutstanding(sale.created_at);
+                    const overdue =
+                      sale.is_overdue ?? (sale.balance > 0 && isSaleOverdue(days));
+
+                    return (
+                      <Link
+                        key={sale.id}
+                        href={`/sales/${sale.id}`}
+                        className="flex items-center justify-between text-[13.5px] py-2 border-b border-border/50 last:border-0 hover:bg-bg-hover rounded px-1.5 -mx-1.5 transition-colors group"
+                      >
+                        <div>
+                          <span className="font-semibold text-text-primary group-hover:text-primary transition-colors block">
+                            {sale.receipt_number}
+                          </span>
+                          <small className="text-[12px] text-text-muted block">
+                            {days} {days === 1 ? 'day' : 'days'} outstanding
+                          </small>
+                        </div>
+                        <div className="text-right">
+                          <b className="text-danger font-semibold block">
+                            {formatPeso(sale.balance)}
+                          </b>
+                          {overdue && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] font-semibold rounded-full bg-danger-light text-danger border border-danger-border mt-0.5">
+                              Overdue
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             ) : (

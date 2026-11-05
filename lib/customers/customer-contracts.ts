@@ -44,6 +44,8 @@ export interface SaleSummary {
   payment_status: 'Paid' | 'Partially Paid' | 'Not Yet Paid';
   order_status: 'Pending' | 'Delivered' | 'Picked Up';
   created_at: string;
+  days_outstanding?: number;
+  is_overdue?: boolean;
 }
 
 export interface CustomerProfileData extends CustomerDTO {
