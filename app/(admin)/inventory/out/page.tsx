@@ -1,39 +1,48 @@
 import { Metadata } from 'next';
-import { PlaceholderPage } from '@/components/ui/placeholder-page';
+import { createClient } from '@/lib/supabase/server';
+import { StockService } from '@/lib/inventory/stock-service';
+import { StockForm } from '@/components/inventory/stock-form';
 
 export const metadata: Metadata = {
   title: 'Stock Out | ARLQ Food Condiments Trading',
-  description: 'Log outgoing condiment shipments, transfers, and disposals.',
+  description: 'Record stock that left without a sale (damages, giveaways, repacking spills).',
 };
 
-export default function StockOutPage() {
+async function getSafeSupabaseClient() {
+  try {
+    return await createClient();
+  } catch {
+    return null;
+  }
+}
+
+interface StockOutPageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function StockOutPage({ searchParams }: StockOutPageProps) {
+  const params = await searchParams;
+  const initialVariantId =
+    typeof params.v === 'string'
+      ? params.v
+      : typeof params.variantId === 'string'
+      ? params.variantId
+      : undefined;
+
+  const supabase = await getSafeSupabaseClient();
+  const stockService = new StockService(supabase);
+
+  const [variants, recentMovements] = await Promise.all([
+    stockService.listVariantsForStock(),
+    stockService.getRecentMovements('Out', 5),
+  ]);
+
   return (
-    <PlaceholderPage
-      title="Stock Out Operations"
-      subtitle="Record stock departures for order fulfillment, warehouse transfers, spillages, and expired write-offs."
-      icon="box"
-      plannedFeatures={[
-        {
-          title: 'Order Fulfillment Dispatch',
-          description:
-            'Pick, pack, and release items for scheduled delivery routes with verified packing slips.',
-        },
-        {
-          title: 'Damages & Spillage Recording',
-          description:
-            'Log broken bottles, container leaks, and quality discard reasons for shrink analysis.',
-        },
-        {
-          title: 'Inter-Branch Stock Transfers',
-          description:
-            'Transfer gallons and drums between secondary fulfillment depots with transit confirmation.',
-        },
-        {
-          title: 'Reason-Coded Audit Trail',
-          description:
-            'Enforce mandatory selection of stock deduction reason codes for accurate cost accounting.',
-        },
-      ]}
+    <StockForm
+      kind="out"
+      variants={variants}
+      initialVariantId={initialVariantId}
+      recentMovements={recentMovements}
     />
   );
 }

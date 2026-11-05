@@ -617,4 +617,106 @@ export class ProductService {
       return { success: true, deletedId: id };
     }
   }
+
+  /**
+   * Retrieves a product variant by its unique ID across all products.
+   */
+  async getVariantById(
+    variantId: string
+  ): Promise<{ product: ProductWithVariants; variant: ProductVariantDTO } | null> {
+    const products = await this.getProducts();
+    for (const p of products) {
+      const v = p.variants.find((variant) => variant.id === variantId);
+      if (v) {
+        return { product: p, variant: v };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Adjusts a variant's stock quantity by delta (positive or negative).
+   * Prevents stock quantity from falling below 0.
+   */
+  async adjustVariantStock(
+    variantId: string,
+    delta: number
+  ): Promise<{ product: ProductWithVariants; variant: ProductVariantDTO }> {
+    if (!this.supabase) {
+      for (const p of inMemoryProducts) {
+        const v = p.variants.find((variant) => variant.id === variantId);
+        if (v) {
+          const nextStock = v.stock_quantity + delta;
+          if (nextStock < 0) {
+            throw new Error(`Insufficient stock: current stock is ${v.stock_quantity}`);
+          }
+          v.stock_quantity = nextStock;
+          v.updated_at = new Date().toISOString();
+          p.updated_at = new Date().toISOString();
+          return { product: p, variant: v };
+        }
+      }
+      throw new Error(`Variant with ID "${variantId}" not found`);
+    }
+
+    try {
+      const { data: vRow, error: fetchErr } = await this.supabase
+        .from('product_variants')
+        .select('id, product_id, size, stock_quantity, products ( id, name, category_id )')
+        .eq('id', variantId)
+        .single();
+
+      if (fetchErr || !vRow) {
+        for (const p of inMemoryProducts) {
+          const v = p.variants.find((variant) => variant.id === variantId);
+          if (v) {
+            const nextStock = v.stock_quantity + delta;
+            if (nextStock < 0) {
+              throw new Error(`Insufficient stock: current stock is ${v.stock_quantity}`);
+            }
+            v.stock_quantity = nextStock;
+            return { product: p, variant: v };
+          }
+        }
+        throw new Error(`Variant with ID "${variantId}" not found`);
+      }
+
+      const currentStock = vRow.stock_quantity ?? 0;
+      const nextStock = currentStock + delta;
+      if (nextStock < 0) {
+        throw new Error(`Insufficient stock: current stock is ${currentStock}`);
+      }
+
+      const { data: updatedRow, error: updateErr } = await this.supabase
+        .from('product_variants')
+        .update({ stock_quantity: nextStock, updated_at: new Date().toISOString() })
+        .eq('id', variantId)
+        .select()
+        .single();
+
+      if (updateErr || !updatedRow) {
+        throw new Error(updateErr?.message || 'Failed to update stock');
+      }
+
+      const fullProduct = await this.getProductById(vRow.product_id);
+      if (!fullProduct) {
+        throw new Error('Associated product not found');
+      }
+      const updatedVariant = fullProduct.variants.find((v) => v.id === variantId)!;
+      return { product: fullProduct, variant: updatedVariant };
+    } catch (err) {
+      for (const p of inMemoryProducts) {
+        const v = p.variants.find((variant) => variant.id === variantId);
+        if (v) {
+          const nextStock = v.stock_quantity + delta;
+          if (nextStock < 0) {
+            throw new Error(`Insufficient stock: current stock is ${v.stock_quantity}`);
+          }
+          v.stock_quantity = nextStock;
+          return { product: p, variant: v };
+        }
+      }
+      throw err;
+    }
+  }
 }
