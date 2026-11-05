@@ -2,6 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   type CreateSaleInput,
   type PaymentStatus,
+  type PackagingSize,
+  type OrderStatus,
   type SaleCalculationSummary,
   type SaleLineInput,
   type SaleLineItemDTO,
@@ -241,6 +243,38 @@ export async function generateNextReceiptNumber(supabase?: SupabaseClient | null
   return `ARLQ-${String(nextNum).padStart(5, '0')}`;
 }
 
+interface SupabaseSaleItemJoinRow {
+  id: string;
+  sale_id: string;
+  variant_id: string;
+  quantity: number;
+  unit_price: number;
+  unit_cost: number;
+  created_at: string;
+  product_variants?: {
+    size?: PackagingSize;
+    products?: {
+      name?: string;
+    };
+  };
+}
+
+interface SupabaseSaleJoinRow {
+  id: string;
+  receipt_number: string;
+  customer_id: string;
+  total_amount: number;
+  amount_paid: number;
+  payment_status: string;
+  order_status: OrderStatus;
+  created_at: string;
+  updated_at: string;
+  customers?: {
+    name?: string;
+  };
+  sale_items?: SupabaseSaleItemJoinRow[];
+}
+
 export class SaleService {
   private readonly supabase?: SupabaseClient | null;
   private readonly productService: ProductService;
@@ -298,8 +332,8 @@ export class SaleService {
         return [...inMemorySales];
       }
 
-      return sales.map((s: any) => {
-        const items: SaleLineItemDTO[] = (s.sale_items || []).map((si: any) => ({
+      return (sales as unknown as SupabaseSaleJoinRow[]).map((s) => {
+        const items: SaleLineItemDTO[] = (s.sale_items || []).map((si) => ({
           id: si.id,
           sale_id: si.sale_id,
           variant_id: si.variant_id,

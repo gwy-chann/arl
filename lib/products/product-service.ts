@@ -7,6 +7,8 @@ import {
   type ProductWithVariants,
 } from '../../specs/006-multi-variant-product-catalog/contracts/product-contracts.ts';
 
+export type { ProductWithVariants, ProductVariantDTO, ProductSizeKey };
+
 export interface CreateProductInput {
   name: string;
   category_id?: string | null;
