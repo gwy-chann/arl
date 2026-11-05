@@ -287,6 +287,16 @@ export function resetMemoryCustomerStore(): void {
   memorySales = [...INITIAL_SALES];
 }
 
+export function recordCustomerSale(sale: SaleSummary): void {
+  memorySales.unshift(sale);
+  const cust = memoryCustomers.find((c) => c.id === sale.customer_id);
+  if (cust) {
+    cust.purchase_count = (cust.purchase_count || 0) + 1;
+    const debtIncrease = Math.max(0, sale.total_amount - sale.amount_paid);
+    cust.debt_balance = (cust.debt_balance || 0) + debtIncrease;
+  }
+}
+
 export function validateCustomerInput(input: unknown): {
   success: boolean;
   data?: CustomerInput;
