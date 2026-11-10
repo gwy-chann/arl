@@ -49,9 +49,6 @@ export async function updateSession(request: NextRequest) {
   // If Supabase credentials are not configured yet, guard protected routes gracefully
   if (isMissingSupabaseConfig(supabaseUrl, supabaseAnonKey)) {
     if (!isPublicAuthRoute) {
-      if (process.env.NODE_ENV === 'development') {
-        return supabaseResponse
-      }
       return redirectToLogin(request)
     }
     return supabaseResponse
@@ -97,9 +94,6 @@ export async function updateSession(request: NextRequest) {
   // Scenario 3: Protected Route Interception
   // If user is unauthenticated and attempting to visit any protected route
   if (!user && !isPublicAuthRoute) {
-    if (process.env.NODE_ENV === 'development') {
-      return supabaseResponse
-    }
     return redirectToLogin(request, supabaseResponse)
   }
 

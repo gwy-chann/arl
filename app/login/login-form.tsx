@@ -1,7 +1,6 @@
 'use client'
 
 import { useActionState } from 'react'
-import Link from 'next/link'
 import { loginAction } from './actions'
 import type { LoginFormState } from '@/specs/001-supabase-ssr-auth/contracts/auth-contracts'
 
@@ -28,17 +27,6 @@ export function LoginForm({ redirectTo = '/dashboard' }: Readonly<LoginFormProps
       <p className="mt-2 mb-6 text-[16px] text-text-muted">
         Administrator access only.
       </p>
-
-      {/* Dev Mode Notice */}
-      <div className="mb-6 p-3 rounded-lg bg-primary-light border border-primary-border/30 text-primary text-[13.5px] flex items-center justify-between">
-        <span><strong>Dev Mode:</strong> Click Log in to preview without credentials</span>
-        <Link
-          href="/products/categories"
-          className="underline font-semibold hover:opacity-80"
-        >
-          Skip to Categories →
-        </Link>
-      </div>
 
       {state?.error && (
         <div
@@ -137,14 +125,9 @@ export function LoginForm({ redirectTo = '/dashboard' }: Readonly<LoginFormProps
         )}
       </button>
 
-      <div className="mt-5 text-center">
-        <Link
-          href="/products/categories"
-          className="text-[14px] text-text-muted hover:text-text-primary transition-colors"
-        >
-          Direct link: Go to Product Categories →
-        </Link>
-      </div>
+      <p className="mt-5 text-[14px] text-text-muted text-center">
+        Forgot your password? Contact the system developer to reset it.
+      </p>
     </form>
   )
 }
