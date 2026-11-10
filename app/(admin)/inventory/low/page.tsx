@@ -1,6 +1,9 @@
 import { Metadata } from 'next';
+import { connection } from 'next/server';
 import { getInventoryVariantsAction } from '@/lib/inventory/inventory-actions';
 import { LowStockTable } from '@/components/inventory/low-stock-table';
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: 'Low Stock Alerts | ARLQ Food Condiments Trading',
@@ -8,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function LowStockPage() {
+  await connection();
   const initialVariants = await getInventoryVariantsAction();
 
   return <LowStockTable initialVariants={initialVariants} />;
