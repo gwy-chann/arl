@@ -1,4 +1,6 @@
 import Image from 'next/image';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
 import { LoginForm } from './login-form';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 
@@ -18,6 +20,18 @@ interface LoginPageProps {
 export default async function LoginPage(props: Readonly<LoginPageProps>) {
   const searchParams = await props.searchParams;
   const redirectTo = searchParams?.redirectTo || '/dashboard';
+
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) {
+      redirect(redirectTo.startsWith('/') ? redirectTo : '/dashboard');
+    }
+  } catch (err: unknown) {
+    if (err && typeof err === 'object' && 'digest' in err) {
+      throw err;
+    }
+  }
 
   return (
     <div className="relative min-h-screen grid grid-cols-1 md:grid-cols-[minmax(440px,46%)_1fr]">

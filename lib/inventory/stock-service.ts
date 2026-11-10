@@ -36,7 +36,7 @@ interface SupabaseMovementRow {
 
 // Canonical baseline historical movements matching ARLQ store records
 function generateBaselineMovements(): StockMovementDTO[] {
-  const now = Date.now();
+  const baseTime = new Date('2026-10-01T00:00:00.000Z').getTime();
   const dayMs = 24 * 60 * 60 * 1000;
 
   return [
@@ -47,7 +47,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 6,
       reason: 'Sale',
       note: 'Sale ARLQ-01064',
-      created_at: new Date(now).toISOString(),
+      created_at: new Date(baseTime).toISOString(),
     },
     {
       id: 'mov-002',
@@ -56,7 +56,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 4,
       reason: 'Sale',
       note: 'Sale ARLQ-01064',
-      created_at: new Date(now).toISOString(),
+      created_at: new Date(baseTime).toISOString(),
     },
     {
       id: 'mov-003',
@@ -65,7 +65,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 96,
       reason: 'Restock from warehouse',
       note: '',
-      created_at: new Date(now - 2 * dayMs).toISOString(),
+      created_at: new Date(baseTime - 2 * dayMs).toISOString(),
     },
     {
       id: 'mov-004',
@@ -74,7 +74,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 72,
       reason: 'Restock from warehouse',
       note: '',
-      created_at: new Date(now - 2 * dayMs).toISOString(),
+      created_at: new Date(baseTime - 2 * dayMs).toISOString(),
     },
     {
       id: 'mov-005',
@@ -83,7 +83,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 1,
       reason: 'Damaged or spilled',
       note: 'Damaged: cracked cap',
-      created_at: new Date(now - 3 * dayMs).toISOString(),
+      created_at: new Date(baseTime - 3 * dayMs).toISOString(),
     },
     {
       id: 'mov-006',
@@ -92,7 +92,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 48,
       reason: 'Restock from warehouse',
       note: '',
-      created_at: new Date(now - 5 * dayMs).toISOString(),
+      created_at: new Date(baseTime - 5 * dayMs).toISOString(),
     },
     {
       id: 'mov-007',
@@ -101,7 +101,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 2,
       reason: 'Sample or giveaway',
       note: 'Sample for new customer',
-      created_at: new Date(now - 7 * dayMs).toISOString(),
+      created_at: new Date(baseTime - 7 * dayMs).toISOString(),
     },
     {
       id: 'mov-008',
@@ -110,7 +110,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 24,
       reason: 'Restock from warehouse',
       note: '',
-      created_at: new Date(now - 9 * dayMs).toISOString(),
+      created_at: new Date(baseTime - 9 * dayMs).toISOString(),
     },
     {
       id: 'mov-009',
@@ -119,7 +119,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 36,
       reason: 'Restock from warehouse',
       note: '',
-      created_at: new Date(now - 13 * dayMs).toISOString(),
+      created_at: new Date(baseTime - 13 * dayMs).toISOString(),
     },
     {
       id: 'mov-010',
@@ -128,7 +128,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 3,
       reason: 'Used for repacking',
       note: 'Spilled during repack',
-      created_at: new Date(now - 16 * dayMs).toISOString(),
+      created_at: new Date(baseTime - 16 * dayMs).toISOString(),
     },
     {
       id: 'mov-011',
@@ -137,7 +137,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 18,
       reason: 'Restock from warehouse',
       note: '',
-      created_at: new Date(now - 20 * dayMs).toISOString(),
+      created_at: new Date(baseTime - 20 * dayMs).toISOString(),
     },
     {
       id: 'mov-012',
@@ -146,7 +146,7 @@ function generateBaselineMovements(): StockMovementDTO[] {
       quantity: 48,
       reason: 'Restock from warehouse',
       note: '',
-      created_at: new Date(now - 27 * dayMs).toISOString(),
+      created_at: new Date(baseTime - 27 * dayMs).toISOString(),
     },
   ];
 }

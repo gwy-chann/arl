@@ -31,7 +31,7 @@ export async function generateMetadata({
 
 export default async function EditCustomerPage({
   params,
-}: EditCustomerPageProps) {
+}: Readonly<EditCustomerPageProps>) {
   await connection();
   const { id } = await params;
   const customer = await getCustomerByIdAction(id);

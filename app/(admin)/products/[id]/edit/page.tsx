@@ -1,8 +1,11 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
 import { getProductByIdAction } from '@/lib/products/product-actions';
 import { getCategoriesAction } from '@/lib/categories/category-actions';
 import { ProductForm } from '@/components/products/product-form';
+
+export const instant = false;
 
 interface EditProductPageProps {
   params: Promise<{ id: string }>;
@@ -11,6 +14,7 @@ interface EditProductPageProps {
 export async function generateMetadata({
   params,
 }: EditProductPageProps): Promise<Metadata> {
+  await connection();
   const { id } = await params;
   const product = await getProductByIdAction(id);
 
@@ -25,6 +29,7 @@ export async function generateMetadata({
 export default async function EditProductPage({
   params,
 }: Readonly<EditProductPageProps>) {
+  await connection();
   const { id } = await params;
   const [product, categories] = await Promise.all([
     getProductByIdAction(id),

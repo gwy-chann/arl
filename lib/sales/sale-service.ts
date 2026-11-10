@@ -283,7 +283,7 @@ let inMemorySales: SaleTransactionDTO[] = [
         quantity: 2,
         unit_price: 200,
         unit_cost: 160,
-        created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+        created_at: new Date('2026-10-25T00:00:00Z').toISOString(),
       },
       {
         id: 'si-6',
@@ -294,7 +294,7 @@ let inMemorySales: SaleTransactionDTO[] = [
         quantity: 4,
         unit_price: 160,
         unit_cost: 125,
-        created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+        created_at: new Date('2026-10-25T00:00:00Z').toISOString(),
       },
       {
         id: 'si-7',
@@ -305,11 +305,11 @@ let inMemorySales: SaleTransactionDTO[] = [
         quantity: 3,
         unit_price: 100,
         unit_cost: 75,
-        created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+        created_at: new Date('2026-10-25T00:00:00Z').toISOString(),
       },
     ],
-    created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+    created_at: new Date('2026-10-25T00:00:00Z').toISOString(),
+    updated_at: new Date('2026-10-25T00:00:00Z').toISOString(),
   },
 ];
 

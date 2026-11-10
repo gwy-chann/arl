@@ -1,6 +1,9 @@
 import { Metadata } from 'next';
+import { connection } from 'next/server';
 import { getInventoryVariantsAction } from '@/lib/inventory/inventory-actions';
 import { InventoryTable } from '@/components/inventory/inventory-table';
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: 'Inventory Overview | ARLQ Food Condiments Trading',
@@ -8,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function InventoryPage() {
+  await connection();
   const initialVariants = await getInventoryVariantsAction();
 
   return <InventoryTable initialVariants={initialVariants} />;

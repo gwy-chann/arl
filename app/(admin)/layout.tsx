@@ -31,18 +31,6 @@ export default async function AdminLayout({
     user = null;
   }
 
-  // Graceful fallback for local development when Supabase container is offline
-  if (!user && process.env.NODE_ENV === 'development') {
-    user = {
-      id: 'dev-admin',
-      email: 'admin@arlq.com',
-      user_metadata: {
-        name: 'Administrator',
-        role: 'Owner account',
-      },
-    };
-  }
-
   if (!user) {
     redirect('/login');
   }

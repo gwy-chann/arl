@@ -93,12 +93,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: 'Settings',
     icon: 'gear',
     href: '/settings/reminders',
-    subNav: [
-      { label: 'Reminder settings', href: '/settings/reminders', key: 'settings/reminders' },
-      { label: 'Minimum stock levels', href: '/settings/stock', key: 'settings/stock' },
-      { label: 'Appearance', href: '/settings/appearance', key: 'settings/appearance' },
-      { label: 'Change password', href: '/settings/password', key: 'settings/password' },
-    ],
   },
 ] as const;
 
@@ -130,6 +124,9 @@ export function isRouteActive(
  * Determines whether a main nav item or any of its subnav items matches the current route.
  */
 export function isSectionActive(currentPath: string, item: NavItem): boolean {
+  if (item.key === 'settings' && (currentPath === '/settings' || currentPath.startsWith('/settings/'))) {
+    return true;
+  }
   if (isRouteActive(currentPath, item.href)) {
     return true;
   }

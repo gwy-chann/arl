@@ -1,7 +1,10 @@
 import { Metadata } from 'next';
+import { connection } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { StockService } from '@/lib/inventory/stock-service';
 import { StockForm } from '@/components/inventory/stock-form';
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: 'Stock Out | ARLQ Food Condiments Trading',
@@ -21,6 +24,7 @@ interface StockOutPageProps {
 }
 
 export default async function StockOutPage({ searchParams }: StockOutPageProps) {
+  await connection();
   const params = await searchParams;
   const initialVariantId =
     typeof params.v === 'string'

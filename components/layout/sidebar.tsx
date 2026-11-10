@@ -34,7 +34,7 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
       id="sidebar"
       aria-label="Sidebar navigation"
       className={`
-        fixed inset-y-0 left-0 z-60 w-[280px] md:w-[260px]
+        fixed inset-y-0 left-0 z-60 w-70 md:w-65
         flex flex-col bg-bg-surface border-r border-border
         md:sticky md:top-0 md:h-screen md:z-10
         transition-transform duration-200 ease-in-out
@@ -42,11 +42,11 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
       `}
     >
       {/* Brand Header */}
-      <div className="flex flex-col items-center justify-center pt-4 pb-3.5 px-6 gap-1.5 bg-primary dark:bg-linear-to-b dark:from-hero-gradient-from dark:to-hero-gradient-to dark:border-b dark:border-border text-text-light flex-shrink-0">
+      <div className="flex flex-col items-center justify-center pt-4 pb-3.5 px-6 gap-1.5 bg-primary dark:bg-linear-to-b dark:from-hero-gradient-from dark:to-hero-gradient-to dark:border-b dark:border-border text-text-light shrink-0">
         <div
           role="img"
           aria-label="ARL Quality logo"
-          className="logo-mark w-full max-w-[155px] mx-auto"
+          className="logo-mark w-full max-w-38.75 mx-auto"
         />
         <span className="text-[12.5px] text-text-light/85 dark:text-text-secondary text-center leading-[1.3] font-medium">
           Food Condiments Trading
@@ -64,57 +64,39 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
 
           return (
             <div key={item.key} className="flex flex-col">
-              <div className="flex items-center">
-                <Link
-                  href={item.href}
-                  onClick={() => {
-                    if (hasSubNav && !isExpanded) {
-                      toggleSection(item.key);
-                    }
-                  }}
-                  className={`
-                    flex-1 flex items-center gap-3 px-3 py-2 rounded-md
-                    text-[14.5px] transition-colors
-                    ${
-                      sectionActive
-                        ? 'bg-primary-light text-primary font-semibold dark:bg-[rgba(34,197,94,0.22)] dark:text-primary-hover dark:font-bold'
-                        : 'text-text-secondary hover:bg-bg-muted hover:text-text-primary font-medium'
-                    }
-                  `}
-                >
-                  <NavIcon name={item.icon} className="w-4.5 h-4.5 shrink-0" />
-                  <span className="truncate">{item.label}</span>
-                  {item.badgeCount !== undefined && item.badgeCount > 0 && (
-                    <span className="ml-auto bg-danger text-text-light text-[11.5px] font-bold rounded-full px-2 py-0.5 leading-none">
-                      {item.badgeCount}
-                    </span>
-                  )}
-                </Link>
-
-                {hasSubNav && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
+              <Link
+                href={item.href}
+                onClick={(e) => {
+                  if (hasSubNav) {
+                    if (isExpanded) {
                       e.preventDefault();
-                      e.stopPropagation();
                       toggleSection(item.key);
-                    }}
-                    aria-label={`Toggle ${item.label} sub-items`}
-                    aria-expanded={isExpanded}
-                    className="p-2 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
-                  >
-                    <svg
-                      className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
+                    } else {
+                      toggleSection(item.key);
+                    }
+                  } else {
+                    closeSidebar();
+                  }
+                }}
+                aria-expanded={hasSubNav ? isExpanded : undefined}
+                className={`
+                  flex items-center gap-3 px-3 py-2 rounded-md
+                  text-[14.5px] transition-colors cursor-pointer
+                  ${
+                    sectionActive
+                      ? 'bg-primary-light text-primary font-semibold dark:bg-[rgba(34,197,94,0.22)] dark:text-primary-hover dark:font-bold'
+                      : 'text-text-secondary hover:bg-bg-muted hover:text-text-primary font-medium'
+                  }
+                `}
+              >
+                <NavIcon name={item.icon} className="w-4.5 h-4.5 shrink-0" />
+                <span className="truncate">{item.label}</span>
+                {item.badgeCount !== undefined && item.badgeCount > 0 && (
+                  <span className="ml-auto bg-danger text-text-light text-[11.5px] font-bold rounded-full px-2 py-0.5 leading-none">
+                    {item.badgeCount}
+                  </span>
                 )}
-              </div>
+              </Link>
 
               {/* Nested Subnav Accordion */}
               {hasSubNav && isExpanded && (
@@ -147,7 +129,7 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
       </nav>
 
       {/* Sidebar Footer */}
-      <div className="border-t border-border p-2.5 flex-shrink-0 flex flex-col gap-2">
+      <div className="border-t border-border p-2.5 shrink-0 flex flex-col gap-2">
         <div className="flex items-center gap-2.5 px-2 py-1">
           <div className="w-8 h-8 rounded-full bg-bg-muted border border-border flex items-center justify-center font-bold text-xs text-text-primary shrink-0">
             {userInitials}
