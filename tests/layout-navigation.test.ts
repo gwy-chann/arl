@@ -47,6 +47,9 @@ describe('Responsive Layout Navigation & Shell Models (ARL-3)', () => {
       const customers = NAV_ITEMS.find((n) => n.key === 'customers');
       assert.ok(customers?.subNav);
       assert.strictEqual(customers.subNav.length, 2);
+
+      const settings = NAV_ITEMS.find((n) => n.key === 'settings');
+      assert.strictEqual(settings?.subNav, undefined);
     });
   });
 
@@ -82,6 +85,13 @@ describe('Responsive Layout Navigation & Shell Models (ARL-3)', () => {
       assert.strictEqual(isSectionActive('/sales', salesItem), true);
       assert.strictEqual(isSectionActive('/sales/new', salesItem), true);
       assert.strictEqual(isSectionActive('/inventory', salesItem), false);
+
+      const settingsItem = NAV_ITEMS.find((n) => n.key === 'settings')!;
+      assert.strictEqual(isSectionActive('/settings', settingsItem), true);
+      assert.strictEqual(isSectionActive('/settings/reminders', settingsItem), true);
+      assert.strictEqual(isSectionActive('/settings/stock', settingsItem), true);
+      assert.strictEqual(isSectionActive('/settings/appearance', settingsItem), true);
+      assert.strictEqual(isSectionActive('/settings/password', settingsItem), true);
     });
   });
 

@@ -41,19 +41,7 @@ export function LayoutProvider({ children }: Readonly<LayoutProviderProps>) {
 
     if (pathname) {
       const activeKeys = getInitialExpandedSections(pathname);
-      if (activeKeys.length > 0) {
-        const next = new Set(expandedSections);
-        let changed = false;
-        for (const key of activeKeys) {
-          if (!next.has(key)) {
-            next.add(key);
-            changed = true;
-          }
-        }
-        if (changed) {
-          setExpandedSections(next);
-        }
-      }
+      setExpandedSections(new Set(activeKeys));
     }
   }
 
@@ -63,13 +51,10 @@ export function LayoutProvider({ children }: Readonly<LayoutProviderProps>) {
 
   const toggleSection = useCallback((key: string) => {
     setExpandedSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
+      if (prev.has(key)) {
+        return new Set();
       }
-      return next;
+      return new Set([key]);
     });
   }, []);
 
