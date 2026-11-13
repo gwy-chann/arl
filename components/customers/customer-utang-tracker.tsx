@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/toast-provider';
 import type { CustomerUtangSummaryDTO } from '@/lib/customers/customer-contracts';
 import { formatPeso } from '@/lib/customers/customer-service';
+import { sendCustomerSmsReminderAction } from '@/lib/customers/customer-actions';
 
 export interface CustomerUtangTrackerProps {
   initialSummary: CustomerUtangSummaryDTO;
@@ -12,7 +14,11 @@ export interface CustomerUtangTrackerProps {
 export function CustomerUtangTracker({
   initialSummary,
 }: Readonly<CustomerUtangTrackerProps>) {
+  const { showToast } = useToast();
+  const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSendingId, setActiveSendingId] = useState<string | null>(null);
+  const [cooldownSet, setCooldownSet] = useState<Set<string>>(new Set());
 
   const filteredRows = useMemo(() => {
     const trimmed = searchQuery.trim().toLowerCase();
@@ -38,6 +44,36 @@ export function CustomerUtangTracker({
     } catch {
       return dateString;
     }
+  };
+
+  const handleSendSms = (
+    customerId: string,
+    saleId: string,
+    customerName: string,
+    phone: string
+  ) => {
+    if (!phone || !phone.trim()) {
+      showToast('Cannot send SMS: No phone number on record', undefined, 'danger');
+      return;
+    }
+
+    setActiveSendingId(customerId);
+    startTransition(async () => {
+      const res = await sendCustomerSmsReminderAction({
+        customerId,
+        saleId,
+      });
+
+      setActiveSendingId(null);
+
+      if (!res.success) {
+        showToast(res.error || 'Failed to send SMS reminder', undefined, 'danger');
+        return;
+      }
+
+      setCooldownSet((prev) => new Set(prev).add(customerId));
+      showToast(`SMS reminder sent to ${customerName}`);
+    });
   };
 
   return (
@@ -102,7 +138,10 @@ export function CustomerUtangTracker({
           <b className="text-[17px] pt-1.5 truncate">
             SMS to {initialSummary.admin_mobile}
           </b>
-          <small>after {initialSummary.reminder_days} days unpaid</small>
+          <small>
+            after {initialSummary.reminder_days} days unpaid
+            {initialSummary.notify_customer_sms ? ' · Customer SMS on' : ' · Customer SMS off'}
+          </small>
         </div>
       </div>
 
@@ -205,12 +244,49 @@ export function CustomerUtangTracker({
                     className="actions-td"
                     style={{ textAlign: 'right' }}
                   >
-                    <Link
-                      href={`/customers/${row.customer_id}`}
-                      className="btn sec sm"
-                    >
-                      Open profile
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleSendSms(
+                            row.customer_id,
+                            row.oldest_sale_id,
+                            row.customer_name,
+                            row.phone
+                          )
+                        }
+                        disabled={
+                          isPending ||
+                          activeSendingId === row.customer_id ||
+                          cooldownSet.has(row.customer_id) ||
+                          !row.phone ||
+                          !row.phone.trim()
+                        }
+                        className="btn sec sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        title={
+                          !row.phone || !row.phone.trim()
+                            ? 'No phone number on record'
+                            : cooldownSet.has(row.customer_id)
+                            ? 'Reminder sent recently'
+                            : 'Send SMS Reminder'
+                        }
+                      >
+                        {activeSendingId === row.customer_id ? (
+                          'Sending...'
+                        ) : cooldownSet.has(row.customer_id) ? (
+                          'Sent'
+                        ) : (
+                          'Send SMS'
+                        )}
+                      </button>
+
+                      <Link
+                        href={`/customers/${row.customer_id}`}
+                        className="btn sec sm"
+                      >
+                        Open profile
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
