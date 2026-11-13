@@ -621,6 +621,7 @@ export async function updateCustomer(
 export interface CustomerUtangCalculationOptions {
   reminderDays?: number;
   adminMobile?: string;
+  notifyCustomerSms?: boolean;
   asOfDate?: Date;
 }
 
@@ -703,6 +704,7 @@ export function calculateCustomerUtangSummary(
     overdue_debtors: overdueRows.length,
     reminder_days: reminderDays,
     admin_mobile: adminMobile,
+    notify_customer_sms: options.notifyCustomerSms ?? false,
   };
 }
 
@@ -715,12 +717,14 @@ export async function getCustomerUtangSummary(
 ): Promise<CustomerUtangSummaryDTO> {
   let reminderDays = 7;
   let adminMobile = '0917 555 0142';
+  let notifyCustomerSms = false;
 
   try {
     const settings = await getSystemSettings(supabase || undefined);
     if (settings) {
       reminderDays = settings.reminder_days;
       adminMobile = settings.admin_mobile;
+      notifyCustomerSms = settings.notify_customer_sms;
     }
   } catch {
     // Fallback to default reminder settings
@@ -757,6 +761,7 @@ export async function getCustomerUtangSummary(
   return calculateCustomerUtangSummary(customers, sales, {
     reminderDays,
     adminMobile,
+    notifyCustomerSms,
     asOfDate,
   });
 }

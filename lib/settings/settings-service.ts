@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS: SystemSettingsDTO = {
   reminder_days: 7,
   admin_mobile: '0917 555 0142',
   notification_channel: 'SMS',
+  notify_customer_sms: false,
+  customer_sms_template: null,
   updated_at: new Date('2026-10-01T00:00:00.000Z').toISOString(),
 };
 
@@ -60,6 +62,8 @@ export async function getSystemSettings(supabaseClient?: SupabaseClient | null):
           reminder_days: Number(data.reminder_days),
           admin_mobile: data.admin_mobile,
           notification_channel: data.notification_channel || 'SMS',
+          notify_customer_sms: Boolean(data.notify_customer_sms),
+          customer_sms_template: data.customer_sms_template ?? null,
           updated_at: data.updated_at,
         };
       }
@@ -89,6 +93,8 @@ export async function updateReminderSettings(
           reminder_days: validated.reminder_days,
           admin_mobile: validated.admin_mobile,
           notification_channel: validated.notification_channel,
+          notify_customer_sms: validated.notify_customer_sms,
+          customer_sms_template: validated.customer_sms_template ?? null,
           updated_at: new Date().toISOString(),
         })
         .select()
@@ -100,6 +106,8 @@ export async function updateReminderSettings(
           reminder_days: Number(data.reminder_days),
           admin_mobile: data.admin_mobile,
           notification_channel: data.notification_channel || 'SMS',
+          notify_customer_sms: Boolean(data.notify_customer_sms),
+          customer_sms_template: data.customer_sms_template ?? null,
           updated_at: data.updated_at,
         };
         return { ...memorySettings };
@@ -114,6 +122,8 @@ export async function updateReminderSettings(
     reminder_days: validated.reminder_days,
     admin_mobile: validated.admin_mobile,
     notification_channel: validated.notification_channel,
+    notify_customer_sms: validated.notify_customer_sms,
+    customer_sms_template: validated.customer_sms_template ?? null,
     updated_at: new Date().toISOString(),
   };
 
@@ -307,4 +317,20 @@ export function formatReminderSampleMessage(
     maximumFractionDigits: 2,
   });
   return `ARLQ: ${customerName} still owes ₱${formattedAmount} for receipt ${receiptNo}. Unpaid for ${days} days. Reminders stop once the sale is marked Paid.`;
+}
+
+/**
+ * Formats the customer reminder sample message text matching specifications.
+ */
+export function formatCustomerReminderSampleMessage(
+  customerName: string,
+  amountOwed: number,
+  receiptNo: string,
+  days: number
+): string {
+  const formattedAmount = amountOwed.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `ARLQ Condiments: Good day, ${customerName}! Friendly reminder that receipt ${receiptNo} has an outstanding balance of ₱${formattedAmount} (due after ${days} days). Kindly settle at your earliest convenience. Thank you for your continued business!`;
 }
