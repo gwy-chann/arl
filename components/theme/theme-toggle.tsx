@@ -6,51 +6,53 @@ import { useTheme } from './use-theme';
 export interface ThemeToggleProps {
   className?: string;
   showLabel?: boolean;
+  variant?: 'pill' | 'button';
 }
 
-export function ThemeToggle({ className = '', showLabel = true }: Readonly<ThemeToggleProps>) {
+export function ThemeToggle({
+  className = '',
+  showLabel = true,
+  variant = 'pill',
+}: Readonly<ThemeToggleProps>) {
   const { isDark, toggleTheme } = useTheme();
+
+  const baseClass = variant === 'button' ? 'btn sec sm' : 'theme-toggle-btn';
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      className={`inline-flex items-center gap-1.75 px-3.25 py-1.5 rounded-full border border-border-subtle bg-bg-muted hover:bg-bg-surface text-text-primary hover:text-primary hover:border-primary text-[13.5px] font-semibold cursor-pointer transition-all shadow-xs ${className}`}
+      className={`${baseClass} ${className}`}
     >
       {isDark ? (
         <>
           <svg
-            className="w-4 h-4 text-primary shrink-0"
+            className="w-4 h-4 shrink-0 stroke-[2]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             aria-hidden="true"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-            />
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
           </svg>
           {showLabel && <span>Light mode</span>}
         </>
       ) : (
         <>
           <svg
-            className="w-4 h-4 text-primary shrink-0"
+            className="w-4 h-4 shrink-0 stroke-[1.8]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             aria-hidden="true"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-            />
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
           </svg>
           {showLabel && <span>Dark mode</span>}
         </>
@@ -60,4 +62,3 @@ export function ThemeToggle({ className = '', showLabel = true }: Readonly<Theme
 }
 
 export default ThemeToggle;
-
