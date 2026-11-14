@@ -1,23 +1,18 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { createClient } from '@/lib/supabase/server';
+import { connection } from 'next/server';
+import { getSafeSupabaseClient } from '@/lib/supabase/server';
 import { getCustomerDirectory } from '@/lib/customers/customer-service';
 import { ProductService } from '@/lib/products/product-service';
 import { NewSaleWizard } from '@/components/sales/new-sale-wizard';
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: 'New Sale | ARLQ Food Condiments Trading',
   description: 'Create and process a new customer sale order.',
 };
-
-async function getSafeSupabaseClient() {
-  try {
-    return await createClient();
-  } catch {
-    return null;
-  }
-}
 
 interface NewSalePageProps {
   searchParams: Promise<{ customerId?: string; customer?: string }>;
@@ -49,6 +44,7 @@ function NewSaleLoadingSkeleton() {
 }
 
 async function NewSaleContent({ searchParams }: NewSalePageProps) {
+  await connection();
   const params = await searchParams;
   const initialCustomerId = params.customerId || params.customer || '';
 

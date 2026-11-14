@@ -12,6 +12,7 @@ export interface LoginCredentials {
 
 export interface LoginFormState {
   email?: string;
+  username?: string;
   error?: string | null;
   success?: boolean;
   redirectTo?: string;

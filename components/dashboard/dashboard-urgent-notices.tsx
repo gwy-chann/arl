@@ -26,7 +26,7 @@ export function DashboardUrgentNotices({
           <p>No overdue balances or low stock.</p>
         </div>
       ) : (
-        <div className="divide-y divide-border">
+        <div>
           {notices.map((notice) => (
             <div key={notice.id} className="notice">
               <span className={`dot ${notice.badge_tone}`} aria-hidden="true" />
