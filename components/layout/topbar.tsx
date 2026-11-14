@@ -9,9 +9,7 @@ export function Topbar() {
   const { toggleSidebar, isSidebarOpen } = useLayout();
 
   return (
-    <header
-      className="sticky top-0 z-30 h-[52px] w-full flex items-center justify-between px-4 md:px-9 bg-bg-surface border-b border-border"
-    >
+    <header className="topbar w-full flex items-center justify-between h-[52px] px-4 md:px-9 bg-bg-surface border-b border-border sticky top-0 z-30">
       {/* Mobile-only hamburger button and brand logo */}
       <div className="flex items-center gap-3 md:hidden">
         <button
@@ -28,13 +26,13 @@ export function Topbar() {
         <div
           role="img"
           aria-label="ARL Quality logo"
-          className="logo-mark w-[78px]"
+          className="topbar-brand logo-mark w-[78px]"
         />
       </div>
 
       {/* Topbar Right Actions (Theme Toggle) */}
-      <div className="ml-auto flex items-center gap-3">
-        <ThemeToggle />
+      <div className="topbar-right ml-auto flex items-center gap-2.5">
+        <ThemeToggle variant="pill" />
       </div>
     </header>
   );

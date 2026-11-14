@@ -42,13 +42,13 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
       `}
     >
       {/* Brand Header */}
-      <div className="flex flex-col items-center justify-center pt-4 pb-3.5 px-6 gap-1.5 bg-primary dark:bg-linear-to-b dark:from-hero-gradient-from dark:to-hero-gradient-to dark:border-b dark:border-border text-text-light shrink-0">
+      <div className="side-logo shrink-0">
         <div
           role="img"
           aria-label="ARL Quality logo"
-          className="logo-mark w-full max-w-38.75 mx-auto"
+          className="logo-mark"
         />
-        <span className="text-[12.5px] text-text-light/85 dark:text-text-secondary text-center leading-[1.3] font-medium">
+        <span>
           Food Condiments Trading
           <br />
           Inventory and Sales
@@ -56,7 +56,7 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
       </div>
 
       {/* Main Navigation */}
-      <nav className="flex-1 overflow-y-auto px-2.5 py-3 flex flex-col gap-0.5" aria-label="Main">
+      <nav className="nav overflow-y-auto" aria-label="Main">
         {NAV_ITEMS.map((item) => {
           const sectionActive = isSectionActive(pathname, item);
           const isExpanded = expandedSections.has(item.key);
@@ -79,20 +79,12 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
                   }
                 }}
                 aria-expanded={hasSubNav ? isExpanded : undefined}
-                className={`
-                  flex items-center gap-3 px-3 py-2 rounded-md
-                  text-[14.5px] transition-colors cursor-pointer
-                  ${
-                    sectionActive
-                      ? 'bg-primary-light text-primary font-semibold dark:bg-[rgba(34,197,94,0.22)] dark:text-primary-hover dark:font-bold'
-                      : 'text-text-secondary hover:bg-bg-muted hover:text-text-primary font-medium'
-                  }
-                `}
+                className={sectionActive ? 'on' : ''}
               >
                 <NavIcon name={item.icon} className="w-4.5 h-4.5 shrink-0" />
                 <span className="truncate">{item.label}</span>
                 {item.badgeCount !== undefined && item.badgeCount > 0 && (
-                  <span className="ml-auto bg-danger text-text-light text-[11.5px] font-bold rounded-full px-2 py-0.5 leading-none">
+                  <span className="badge-n">
                     {item.badgeCount}
                   </span>
                 )}
@@ -100,7 +92,7 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
 
               {/* Nested Subnav Accordion */}
               {hasSubNav && isExpanded && (
-                <div className="flex flex-col ml-8 border-l border-border my-1 pl-1">
+                <div className="subnav">
                   {item.subNav!.map((sub) => {
                     const subActive = isRouteActive(pathname, sub.href, true);
                     return (
@@ -108,14 +100,7 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
                         key={sub.key}
                         href={sub.href}
                         onClick={closeSidebar}
-                        className={`
-                          py-1.5 px-3 rounded-r-md text-[13.5px] transition-colors
-                          ${
-                            subActive
-                              ? 'text-primary font-bold dark:text-primary-hover'
-                              : 'text-text-muted hover:text-text-primary font-medium'
-                          }
-                        `}
+                        className={subActive ? 'on' : ''}
                       >
                         {sub.label}
                       </Link>
@@ -129,18 +114,14 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
       </nav>
 
       {/* Sidebar Footer */}
-      <div className="border-t border-border p-2.5 shrink-0 flex flex-col gap-2">
-        <div className="flex items-center gap-2.5 px-2 py-1">
-          <div className="w-8 h-8 rounded-full bg-bg-muted border border-border flex items-center justify-center font-bold text-xs text-text-primary shrink-0">
+      <div className="sidebar-foot shrink-0">
+        <div className="who">
+          <div className="avatar">
             {userInitials}
           </div>
           <div className="min-w-0">
-            <b className="block text-sm font-semibold text-text-primary truncate">
-              {userName}
-            </b>
-            <span className="block text-[12.5px] text-text-muted truncate">
-              {userRole}
-            </span>
+            <b>{userName}</b>
+            <span>{userRole}</span>
           </div>
         </div>
 
