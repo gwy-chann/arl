@@ -14,15 +14,19 @@ export const reminderSettingsSchema = z.object({
     .min(7, 'Admin mobile number is required')
     .max(25, 'Admin mobile number is too long'),
   notification_channel: z.literal('SMS').default('SMS'),
+  notify_customer_sms: z.boolean().default(false),
+  customer_sms_template: z.string().nullable().optional(),
 });
 
-export type ReminderSettingsInput = z.infer<typeof reminderSettingsSchema>;
+export type ReminderSettingsInput = z.input<typeof reminderSettingsSchema>;
 
 export interface SystemSettingsDTO {
   id: string;
   reminder_days: number;
   admin_mobile: string;
   notification_channel: string;
+  notify_customer_sms: boolean;
+  customer_sms_template?: string | null;
   updated_at: string;
 }
 

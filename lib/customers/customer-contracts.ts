@@ -85,4 +85,5 @@ export interface CustomerUtangSummaryDTO {
   overdue_debtors: number;
   reminder_days: number;
   admin_mobile: string;
+  notify_customer_sms?: boolean;
 }

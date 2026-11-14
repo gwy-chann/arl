@@ -15,6 +15,7 @@ import { StockService } from '../inventory/stock-service.ts';
 import {
   recordCustomerSale,
   updateCustomerSalePayment,
+  getCustomerDirectory,
   formatPeso,
 } from '../customers/customer-service.ts';
 import { getSystemSettings } from '../settings/settings-service.ts';
@@ -388,6 +389,7 @@ interface SupabaseSaleJoinRow {
   amount_paid: number;
   payment_status: string;
   order_status: OrderStatus;
+  last_sms_sent_at?: string | null;
   created_at: string;
   updated_at: string;
   customers?: {
@@ -417,12 +419,19 @@ export class SaleService {
     const reminderDays = settings.reminder_days || 7;
 
     if (!this.supabase) {
+      const customers = await getCustomerDirectory();
+      const customerMap = new Map(customers.map((c) => [c.id, c]));
+
       return inMemorySales.map((s) => {
+        const cust = customerMap.get(s.customer_id);
         const daysUnpaid = getDaysUnpaid(s.created_at);
         const overdue = isSaleOverdue(s.balance, s.created_at, reminderDays);
         const overdueDays = getOverdueDays(s.created_at, reminderDays);
         return {
           ...s,
+          customer_name: cust ? cust.name : s.customer_name,
+          customer_phone: cust ? cust.phone : s.customer_phone,
+          customer_address: cust ? cust.address : s.customer_address,
           days_unpaid: daysUnpaid,
           is_overdue: overdue,
           days_overdue: overdueDays,
@@ -441,6 +450,7 @@ export class SaleService {
           amount_paid,
           payment_status,
           order_status,
+          last_sms_sent_at,
           created_at,
           updated_at,
           customers (
@@ -521,6 +531,7 @@ export class SaleService {
           gross_profit: grossProfit,
           created_at: s.created_at,
           updated_at: s.updated_at,
+          last_sms_sent_at: s.last_sms_sent_at || null,
           days_unpaid: daysUnpaid,
           is_overdue: overdue,
           days_overdue: overdueDays,
@@ -644,6 +655,34 @@ export class SaleService {
       success: true,
       sale: updatedSale,
     };
+  }
+
+  /**
+   * Updates the last_sms_sent_at timestamp on a sale transaction for rate limiting and audit.
+   */
+  async updateLastSmsSentAt(saleId: string, timestamp?: string): Promise<boolean> {
+    const ts = timestamp || new Date().toISOString();
+
+    const memMatch = inMemorySales.find(
+      (s) => s.id === saleId || s.receipt_number.toLowerCase() === saleId.toLowerCase()
+    );
+    if (memMatch) {
+      memMatch.last_sms_sent_at = ts;
+    }
+
+    if (this.supabase) {
+      try {
+        const { error } = await this.supabase
+          .from('sales')
+          .update({ last_sms_sent_at: ts })
+          .eq('id', saleId);
+        return !error;
+      } catch {
+        return true;
+      }
+    }
+
+    return Boolean(memMatch);
   }
 
   /**

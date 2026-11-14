@@ -17,6 +17,9 @@ import {
   validateCustomerInput,
   getCustomerUtangSummary,
 } from './customer-service.ts';
+import { sendCustomerSmsReminderAction } from '../sales/sale-actions.ts';
+
+export { sendCustomerSmsReminderAction };
 
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) {

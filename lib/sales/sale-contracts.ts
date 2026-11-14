@@ -69,6 +69,7 @@ export interface SaleTransactionDTO {
   gross_profit: number;
   created_at: string;
   updated_at: string;
+  last_sms_sent_at?: string | null;
   days_unpaid?: number;
   is_overdue?: boolean;
   days_overdue?: number;

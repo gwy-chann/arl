@@ -125,6 +125,11 @@ export default async function SaleDetailPage({ params }: Readonly<SaleDetailPage
               daysOverdue={sale.days_overdue || 0}
               daysUnpaid={sale.days_unpaid || 0}
               adminMobile={settings.admin_mobile}
+              saleId={sale.id}
+              customerId={sale.customer_id}
+              customerName={sale.customer_name}
+              customerPhone={sale.customer_phone}
+              lastSmsSentAt={sale.last_sms_sent_at}
             />
           )}
 

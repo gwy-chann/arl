@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { getSafeSupabaseClient } from '../supabase/server.ts';
 import { SaleService } from './sale-service.ts';
+import { sendManualCustomerSmsNudge } from '../services/sms-service.ts';
+import type { ManualSmsNudgeInput } from '../services/sms-contracts.ts';
 import type {
   CreateSaleInput,
   UpdateSalePaymentInput,
@@ -79,6 +81,28 @@ export async function updateSaleOrderStatusAction(input: UpdateSaleOrderStatusIn
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Failed to update order status.',
+    };
+  }
+}
+
+export async function sendCustomerSmsReminderAction(input: ManualSmsNudgeInput) {
+  try {
+    const supabase = await getSafeSupabaseClient();
+    const result = await sendManualCustomerSmsNudge(input, supabase);
+
+    if (result.success) {
+      if (input.saleId) {
+        revalidatePath(`/sales/${input.saleId}`);
+      }
+      revalidatePath('/customers/balances');
+      revalidatePath('/dashboard');
+    }
+
+    return result;
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to send SMS reminder.',
     };
   }
 }
