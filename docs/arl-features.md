@@ -84,10 +84,12 @@ Each variant has its own cost price, selling price, stock quantity, and minimum 
 ## 10. Outstanding Balance (Utang) Reminders
 - Tracks transactions with payment status **Not Yet Paid** or **Partially Paid**
 - Automatic check of unpaid balances
-- **SMS notification to the administrator** if a balance is still unpaid after **1 week (7 days)**
+- **Dual SMS notifications (both administrator and customer)** when a balance remains unpaid after **1 week (7 days)**:
+  - **Admin SMS**: Operational alert containing customer name, remaining balance, receipt number, and days overdue.
+  - **Customer SMS**: Polite, professional reminder containing store name (ARLQ), receipt number, outstanding amount, and payment reminder notice (requires customer mobile number on record).
 - Number of days is admin-configurable (default: 7 days)
-- SMS includes customer name, remaining balance, and receipt number or transaction date
-- Reminder is sent to the **administrator only**, not to customers
+- Configurable customer notification toggle (admin can enable/disable automated customer SMS reminders)
+- Manual SMS reminder option (allows admin to re-send or trigger on-demand SMS to customer directly from the sale details or utang tracker)
 - Reminder stops once the payment status is changed to **Paid**
 - **SMS is the only notification channel** (no email)
 - Notifications are also displayed on the **Dashboard landing page** (notification panel on login)
@@ -105,6 +107,7 @@ Each variant has its own cost price, selling price, stock quantity, and minimum 
 ## 12. Settings (suggested)
 - Reminder days configuration (default: 7 days)
 - Admin mobile number for SMS reminders
+- Customer SMS reminder toggle (enable/disable automated SMS reminders to customers)
 - Minimum stock levels
 - Notification channel: SMS only
 
@@ -132,4 +135,5 @@ Each variant has its own cost price, selling price, stock quantity, and minimum 
 - The scope lists only Delivered and Picked Up as order statuses, but the deliverables also include Pending. All three are included here.
 - The Customer Balances report appears in the To-Be process but not in the scope's report list. It is included here because balance tracking depends on it.
 - The scope statement says "SMS or email" for reminders. This feature list narrows it to SMS only, with notifications also shown on the Dashboard landing page.
+- Overdue balance SMS alerts are dispatched to both the administrator and the customer (when a valid customer phone number exists and the customer SMS option is active).
 - The Settings module is a suggestion to support configurable reminders and minimum stock levels.
