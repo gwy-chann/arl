@@ -8,16 +8,23 @@ export async function loginAction(
   prevState: LoginFormState | null,
   formData: FormData
 ): Promise<LoginFormState> {
-  const email = formData.get('email')?.toString().trim() || '';
+  const rawInput = (
+    formData.get('username')?.toString() ||
+    formData.get('email')?.toString() ||
+    ''
+  ).trim();
   const password = formData.get('password')?.toString() || '';
   const redirectTo = formData.get('redirectTo')?.toString().trim() || '/dashboard';
 
-  if (!email || !password) {
+  if (!rawInput || !password) {
     return {
-      email,
-      error: 'Please enter both email and password.',
+      email: rawInput,
+      username: rawInput,
+      error: 'Please enter both username and password.',
     };
   }
+
+  const email = rawInput.includes('@') ? rawInput : `${rawInput}@arlq.com`;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -25,6 +32,7 @@ export async function loginAction(
   if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'your-project-url') {
     return {
       email,
+      username: rawInput,
       error: 'Supabase connection is not configured. Please supply valid project credentials.',
     };
   }
@@ -40,8 +48,9 @@ export async function loginAction(
     if (error) {
       return {
         email,
+        username: rawInput,
         error: error.message === 'Invalid login credentials' 
-          ? 'Invalid login credentials. Please verify your email and password.'
+          ? 'Invalid login credentials. Please verify your username and password.'
           : error.message,
       };
     }
@@ -53,6 +62,7 @@ export async function loginAction(
 
     return {
       email,
+      username: rawInput,
       error: 'Cannot connect to Supabase. Ensure local Supabase is running (npx supabase start) or check your network.',
     };
   }
