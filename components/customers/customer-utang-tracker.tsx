@@ -79,7 +79,7 @@ export function CustomerUtangTracker({
   return (
     <div className="w-full">
       {/* Breadcrumb Navigation */}
-      <nav aria-label="Breadcrumb" className="mb-4">
+      <nav aria-label="Breadcrumb" className="mb-3">
         <ol className="flex items-center gap-2 text-[13.5px] text-text-muted">
           <li>
             <Link
@@ -109,11 +109,8 @@ export function CustomerUtangTracker({
       </div>
 
       {/* 3-Column Receivables & Reminder KPI Stats Cards */}
-      <div
-        className="stats grid-cols-1 sm:grid-cols-3 !grid-cols-1 sm:!grid-cols-3"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
-      >
-        <div className="stat">
+      <div className="grid grid-cols-1 md:grid-cols-3 bg-bg-surface border border-border rounded-lg mb-6 divide-y md:divide-y-0 md:divide-x divide-border overflow-hidden">
+        <div className="stat p-5">
           <span>Total owed</span>
           <b>{formatPeso(initialSummary.total_owed)}</b>
           <small>
@@ -122,7 +119,7 @@ export function CustomerUtangTracker({
           </small>
         </div>
 
-        <div className={`stat ${initialSummary.overdue_owed > 0 ? 'alert' : ''}`}>
+        <div className={`stat p-5 ${initialSummary.overdue_owed > 0 ? 'alert' : ''}`}>
           <span>Overdue ({initialSummary.reminder_days}+ days)</span>
           <b className={initialSummary.overdue_owed > 0 ? 'text-danger' : ''}>
             {formatPeso(initialSummary.overdue_owed)}
@@ -133,9 +130,9 @@ export function CustomerUtangTracker({
           </small>
         </div>
 
-        <div className="stat">
+        <div className="stat p-5">
           <span>Reminders</span>
-          <b className="text-[17px] pt-1.5 truncate">
+          <b className="text-[17px] pt-1.5 truncate text-text-primary">
             SMS to {initialSummary.admin_mobile}
           </b>
           <small>
@@ -148,7 +145,7 @@ export function CustomerUtangTracker({
       {/* Debt Table Card */}
       <div className="card">
         {/* Search Toolbar */}
-        <div className="toolbar p-3.5 sm:p-4 border-b border-border bg-bg-surface flex items-center justify-between">
+        <div className="p-3.5 sm:p-4 border-b border-border bg-bg-surface flex items-center justify-between gap-4">
           <div className="relative max-w-sm w-full">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
               <svg
@@ -171,67 +168,86 @@ export function CustomerUtangTracker({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search name, contact, or receipt"
               aria-label="Search name, contact, or receipt"
-              className="w-full pl-9 pr-4 py-1.5 text-sm bg-bg-input text-text-primary placeholder:text-text-muted border border-border rounded-[var(--r)] focus:outline-none focus:border-border-focus transition-colors"
+              className="w-full pl-9 pr-4 py-2 text-sm bg-bg-input text-text-primary placeholder:text-text-muted border border-border rounded-md focus:outline-none focus:border-border-focus transition-colors"
             />
+          </div>
+          <div className="text-xs text-text-muted whitespace-nowrap hidden sm:block">
+            {filteredRows.length} {filteredRows.length === 1 ? 'debtor' : 'debtors'}
           </div>
         </div>
 
         {/* Table Wrap */}
-        <div className="tbl-wrap">
-          <table className="tbl-cards">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm border-collapse tbl-cards">
             <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Oldest unpaid sale</th>
-                <th className="num text-right">Days outstanding</th>
-                <th className="num text-right">Balance</th>
-                <th>Status</th>
-                <th>
+              <tr className="border-b border-border bg-bg-surface text-[13.5px] font-semibold text-text-muted">
+                <th scope="col" className="py-3 px-4 font-semibold text-text-muted" style={{ width: '26%' }}>
+                  Customer
+                </th>
+                <th scope="col" className="py-3 px-4 font-semibold text-text-muted" style={{ width: '22%' }}>
+                  Oldest unpaid sale
+                </th>
+                <th scope="col" className="py-3 px-4 font-semibold text-text-muted text-right" style={{ width: '15%' }}>
+                  Days outstanding
+                </th>
+                <th scope="col" className="py-3 px-4 font-semibold text-text-muted text-right" style={{ width: '15%' }}>
+                  Balance
+                </th>
+                <th scope="col" className="py-3 px-4 font-semibold text-text-muted" style={{ width: '12%' }}>
+                  Status
+                </th>
+                <th scope="col" className="py-3 px-4 text-right" style={{ width: '10%' }}>
                   <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {filteredRows.map((row) => (
-                <tr key={row.customer_id}>
-                  <td data-label="Customer">
-                    <b className="font-semibold text-text-primary">
+                <tr
+                  key={row.customer_id}
+                  className="hover:bg-bg-hover transition-colors"
+                >
+                  <td data-label="Customer" className="py-3.5 px-4 align-middle">
+                    <Link
+                      href={`/customers/${row.customer_id}`}
+                      className="font-semibold text-text-primary hover:text-primary transition-colors text-[14.5px] block"
+                    >
                       {row.customer_name}
-                    </b>
-                    <br />
-                    <span className="text-text-muted text-xs">{row.phone}</span>
+                    </Link>
+                    <span className="text-text-muted text-xs block mt-0.5">
+                      {row.phone || '-'}
+                    </span>
                   </td>
 
-                  <td data-label="Oldest Unpaid">
+                  <td data-label="Oldest unpaid sale" className="py-3.5 px-4 align-middle">
                     <Link
                       href={`/sales/${row.oldest_sale_id}`}
-                      className="text-primary hover:underline font-semibold"
+                      className="text-primary hover:underline font-semibold text-[14px] inline-block"
                     >
                       {row.oldest_receipt_number}
                     </Link>
-                    <br />
-                    <span className="text-text-muted text-xs">
+                    <span className="text-text-muted text-xs block mt-0.5">
                       {formatDate(row.oldest_sale_date)}
                     </span>
                   </td>
 
                   <td
-                    data-label="Days Overdue"
-                    className="num text-right tabular-nums"
+                    data-label="Days outstanding"
+                    className="num py-3.5 px-4 align-middle text-right tabular-nums text-text-secondary font-medium"
                   >
                     {row.days_outstanding}
                   </td>
 
                   <td
                     data-label="Balance"
-                    className="num text-right tabular-nums"
+                    className="num py-3.5 px-4 align-middle text-right tabular-nums"
                   >
-                    <b className="font-bold text-danger">
+                    <b className="font-bold text-danger text-[15px]">
                       {formatPeso(row.total_balance)}
                     </b>
                   </td>
 
-                  <td data-label="Status">
+                  <td data-label="Status" className="py-3.5 px-4 align-middle whitespace-nowrap">
                     {row.status === 'Overdue' ? (
                       <span className="pill bad">Overdue</span>
                     ) : (
@@ -241,8 +257,7 @@ export function CustomerUtangTracker({
 
                   <td
                     data-label="Action"
-                    className="actions-td"
-                    style={{ textAlign: 'right' }}
+                    className="actions-td py-3.5 px-4 align-middle text-right whitespace-nowrap"
                   >
                     <div className="flex items-center justify-end gap-2">
                       <button
@@ -294,9 +309,11 @@ export function CustomerUtangTracker({
           </table>
 
           {filteredRows.length === 0 && (
-            <div className="empty">
-              <b>No balances</b>
-              <p>
+            <div className="empty p-10 text-center">
+              <b className="text-text-primary text-base font-semibold block mb-1">
+                No balances
+              </b>
+              <p className="text-text-muted text-sm m-0">
                 {searchQuery
                   ? 'No customers match your search.'
                   : 'All customer accounts are fully paid.'}

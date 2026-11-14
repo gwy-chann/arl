@@ -20,21 +20,16 @@ export function DashboardHeader({
     });
 
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 mb-6 border-b border-border">
+    <div className="page-head">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-text-primary">
-          Good day, {adminName}
-        </h1>
-        <p className="text-sm text-text-muted mt-1">{displayDate}</p>
+        <h1>Good day, {adminName}</h1>
+        <p>{displayDate}</p>
       </div>
 
-      <div className="flex items-center gap-3">
-        <Link
-          href="/sales/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg bg-primary text-text-light hover:bg-primary-hover active:scale-98 transition-all shadow-xs"
-        >
+      <div className="actions">
+        <Link href="/sales/new" className="btn">
           <svg
-            className="w-4 h-4 stroke-current"
+            className="w-4 h-4 stroke-current shrink-0"
             viewBox="0 0 24 24"
             fill="none"
             strokeWidth="2.2"
@@ -48,12 +43,9 @@ export function DashboardHeader({
           New sale
         </Link>
 
-        <Link
-          href="/inventory/in"
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg bg-bg-surface text-text-primary border border-border hover:bg-bg-hover active:scale-98 transition-all shadow-xs"
-        >
+        <Link href="/inventory/in" className="btn sec">
           <svg
-            className="w-4 h-4 stroke-current"
+            className="w-4 h-4 stroke-current shrink-0"
             viewBox="0 0 24 24"
             fill="none"
             strokeWidth="2"

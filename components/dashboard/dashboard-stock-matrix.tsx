@@ -22,16 +22,16 @@ export function DashboardStockMatrix({ matrix }: Readonly<DashboardStockMatrixPr
       <div className="overflow-x-auto">
         <table className="stockgrid">
           <thead>
-            <tr className="border-b border-border bg-bg-muted/40 text-left text-xs text-text-muted uppercase tracking-wider">
+            <tr>
               <th>Product</th>
               <th>350 ml</th>
               <th>1 L</th>
               <th>1 gal</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {matrix.map((row) => (
-              <tr key={row.product_id} className="hover:bg-bg-hover/60 transition-colors">
+              <tr key={row.product_id}>
                 <td>
                   <b className="font-semibold text-text-primary text-[15px]">{row.product_name}</b>
                   {row.category_name && (

@@ -1,38 +1,35 @@
-'use client'
+'use client';
 
-import { useActionState } from 'react'
-import { loginAction } from './actions'
-import type { LoginFormState } from '@/specs/001-supabase-ssr-auth/contracts/auth-contracts'
+import { useActionState } from 'react';
+import { loginAction } from './actions';
+import type { LoginFormState } from '@/specs/001-supabase-ssr-auth/contracts/auth-contracts';
 
 interface LoginFormProps {
-  redirectTo?: string
+  redirectTo?: string;
 }
 
 const initialState: LoginFormState = {
   email: '',
+  username: 'admin',
   error: null,
   success: false,
-}
+};
 
 export function LoginForm({ redirectTo = '/dashboard' }: Readonly<LoginFormProps>) {
-  const [state, formAction, isPending] = useActionState(loginAction, initialState)
+  const [state, formAction, isPending] = useActionState(loginAction, initialState);
 
   return (
-    <form action={formAction} className="w-full">
+    <form action={formAction} className="login-form">
       <input type="hidden" name="redirectTo" value={redirectTo} />
 
-      <h2 className="text-3xl font-bold tracking-tight text-text-primary">
-        Log in
-      </h2>
-      <p className="mt-2 mb-6 text-[16px] text-text-muted">
-        Administrator access only.
-      </p>
+      <h2>Log in</h2>
+      <p className="sub">Administrator access only.</p>
 
       {state?.error && (
         <div
           role="alert"
           aria-live="polite"
-          className="mb-6 p-3.5 rounded-lg bg-danger-light border border-danger-border text-danger text-sm flex items-start gap-2.5 transition-all"
+          className="mb-5.5 p-3.5 rounded-lg bg-danger-light border border-danger-border text-danger text-sm flex items-start gap-2.5 transition-all"
         >
           <svg
             className="w-5 h-5 shrink-0 mt-0.5 text-danger"
@@ -52,48 +49,34 @@ export function LoginForm({ redirectTo = '/dashboard' }: Readonly<LoginFormProps
         </div>
       )}
 
-      <div className="mb-5.5">
-        <label
-          htmlFor="email"
-          className="block text-[15.5px] font-semibold text-text-primary mb-2"
-        >
-          Email address
-        </label>
+      <div className="field">
+        <label htmlFor="u">Username</label>
         <input
-          id="email"
-          name="email"
-          type="email"
-          defaultValue={state?.email || 'admin@arlq.com'}
+          id="u"
+          name="username"
+          type="text"
+          defaultValue={state?.username || state?.email || 'admin'}
           autoComplete="username"
           required
-          placeholder="admin@arlq.com"
-          className="w-full min-h-12 px-4 py-3 text-[16.5px] rounded-lg bg-bg-input text-text-primary border border-border-subtle focus:outline-none focus:ring-2 focus:ring-primary focus:border-border-focus transition-colors"
         />
       </div>
 
-      <div className="mb-6">
-        <label
-          htmlFor="password"
-          className="block text-[15.5px] font-semibold text-text-primary mb-2"
-        >
-          Password
-        </label>
+      <div className="field">
+        <label htmlFor="pw">Password</label>
         <input
-          id="password"
+          id="pw"
           name="password"
           type="password"
-          defaultValue="admin123"
+          defaultValue="password123"
           autoComplete="current-password"
           required
-          placeholder="••••••••"
-          className="w-full min-h-12 px-4 py-3 text-[16.5px] rounded-lg bg-bg-input text-text-primary border border-border-subtle focus:outline-none focus:ring-2 focus:ring-primary focus:border-border-focus transition-colors"
         />
       </div>
 
       <button
         type="submit"
         disabled={isPending}
-        className="w-full min-h-12 py-3 px-5 rounded-lg text-[16.5px] font-semibold bg-primary hover:bg-primary-hover text-text-light transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
+        className="btn block"
       >
         {isPending ? (
           <>
@@ -125,9 +108,9 @@ export function LoginForm({ redirectTo = '/dashboard' }: Readonly<LoginFormProps
         )}
       </button>
 
-      <p className="mt-5 text-[14px] text-text-muted text-center">
+      <p className="hint muted" style={{ marginTop: '20px', fontSize: '14px', textAlign: 'center' }}>
         Forgot your password? Contact the system developer to reset it.
       </p>
     </form>
-  )
+  );
 }
