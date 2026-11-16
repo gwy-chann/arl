@@ -1,4 +1,4 @@
-import { test, describe } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   formatPhilippinePeso,
@@ -19,6 +19,13 @@ import {
 import { POST } from '../app/api/chat/route.ts';
 
 describe('Read-Only Database Grounding Tools (ARL-32)', () => {
+  before(() => {
+    process.env.ASSISTANT_OFFLINE_MODE = 'true';
+  });
+
+  after(() => {
+    delete process.env.ASSISTANT_OFFLINE_MODE;
+  });
   describe('Contracts, Schemas & Formatting Invariants', () => {
     test('formatPhilippinePeso produces exact currency format with peso sign', () => {
       assert.strictEqual(formatPhilippinePeso(1250), '₱1,250.00');
