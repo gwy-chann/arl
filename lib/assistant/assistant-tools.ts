@@ -162,9 +162,9 @@ export async function getSalesOverview(
     totalCashCollected += Number(s.amount_paid) || 0;
     totalOutstandingBalance += Number(s.balance) || 0;
 
-    if (s.payment_status === 'paid') {
+    if (s.payment_status === 'Paid') {
       paidCount++;
-    } else if (s.payment_status === 'partially_paid') {
+    } else if (s.payment_status === 'Partially Paid') {
       partiallyPaidCount++;
     } else {
       notPaidCount++;
@@ -217,7 +217,7 @@ export async function getCustomerBalances(
       (s) =>
         s.customer_id === c.id &&
         Number(s.balance) > 0 &&
-        (s.payment_status === 'not_paid' || s.payment_status === 'partially_paid')
+        (s.payment_status === 'Not Yet Paid' || s.payment_status === 'Partially Paid')
     );
 
     const totalBalance = Number(c.debt_balance) || 0;

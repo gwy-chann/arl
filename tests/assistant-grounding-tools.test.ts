@@ -7,6 +7,7 @@ import {
   SalesOverviewInputSchema,
   CustomerBalancesInputSchema,
   ASSISTANT_TOOL_DECLARATIONS,
+  type AssistantToolName,
 } from '../lib/assistant/assistant-grounding-contracts.ts';
 import {
   getInventorySummary,
@@ -15,6 +16,7 @@ import {
   getStoreSettings,
   executeToolCall,
 } from '../lib/assistant/assistant-tools.ts';
+import { POST } from '../app/api/chat/route.ts';
 
 describe('Read-Only Database Grounding Tools (ARL-32)', () => {
   describe('Contracts, Schemas & Formatting Invariants', () => {
@@ -235,12 +237,78 @@ describe('Read-Only Database Grounding Tools (ARL-32)', () => {
 
       await assert.rejects(
         async () => {
-          await executeToolCall('createProduct' as unknown as any, {});
+          await executeToolCall('createProduct' as unknown as AssistantToolName, {});
         },
         {
           message: /Unknown or unauthorized tool: createProduct/,
         }
       );
+    });
+  });
+
+  describe('Chat Route API (/api/chat) Grounded Dispatch & Fallback', () => {
+    test('POST /api/chat rejects invalid request body with 400', async () => {
+      const req = new Request('http://localhost/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      const res = await POST(req);
+      assert.strictEqual(res.status, 400);
+      const data = await res.json();
+      assert.strictEqual(data.error, 'Invalid chat request payload');
+    });
+
+    test('POST /api/chat handles low-stock inquiry with getInventorySummary tool', async () => {
+      const req = new Request('http://localhost/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Which items are currently low on stock?' }],
+        }),
+      });
+
+      const res = await POST(req);
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.role, 'assistant');
+      assert.strictEqual(typeof data.content, 'string');
+      assert.strictEqual(data.toolCallsExecuted.includes('getInventorySummary'), true);
+      assert.strictEqual(data.content.length > 10, true);
+    });
+
+    test('POST /api/chat handles sales inquiry with getSalesOverview tool', async () => {
+      const req = new Request('http://localhost/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: "Summarize today's sales" }],
+        }),
+      });
+
+      const res = await POST(req);
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.role, 'assistant');
+      assert.strictEqual(data.toolCallsExecuted.includes('getSalesOverview'), true);
+      assert.strictEqual(data.content.includes('₱'), true);
+    });
+
+    test('POST /api/chat handles overdue utang inquiry with getCustomerBalances tool', async () => {
+      const req = new Request('http://localhost/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Who has overdue utang?' }],
+        }),
+      });
+
+      const res = await POST(req);
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.role, 'assistant');
+      assert.strictEqual(data.toolCallsExecuted.includes('getCustomerBalances'), true);
     });
   });
 });
