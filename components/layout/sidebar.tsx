@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   NAV_ITEMS,
@@ -43,10 +44,13 @@ export function Sidebar({ user }: Readonly<SidebarProps>) {
     >
       {/* Brand Header */}
       <div className="side-logo shrink-0">
-        <div
-          role="img"
-          aria-label="ARL Quality logo"
-          className="logo-mark"
+        <Image
+          src="/logo.png"
+          alt="ARL Quality logo"
+          width={155}
+          height={80}
+          priority
+          className="w-full max-w-[155px] h-auto mx-auto object-contain"
         />
         <span>
           Food Condiments Trading

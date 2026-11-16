@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { NavIcon } from './icons';
 import { useLayout } from './layout-context';
@@ -23,10 +24,13 @@ export function Topbar() {
           <NavIcon name="menu" className="w-5 h-5 stroke-[2.2]" />
         </button>
 
-        <div
-          role="img"
-          aria-label="ARL Quality logo"
-          className="topbar-brand logo-mark w-[78px]"
+        <Image
+          src="/logo.png"
+          alt="ARL Quality logo"
+          width={78}
+          height={40}
+          priority
+          className="topbar-brand w-[78px] h-auto object-contain"
         />
       </div>
 
