@@ -5,6 +5,7 @@ import { LayoutProvider } from './layout-context';
 import { Sidebar, type SidebarProps } from './sidebar';
 import { Topbar } from './topbar';
 import { Scrim } from './scrim';
+import { AssistantChatWidget } from '@/components/assistant/assistant-chat-widget';
 
 export interface AppShellProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ export function AppShell({ children, user }: Readonly<AppShellProps>) {
             {children}
           </main>
         </div>
+        <AssistantChatWidget />
       </div>
     </LayoutProvider>
   );
