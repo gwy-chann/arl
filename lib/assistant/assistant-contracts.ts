@@ -87,3 +87,130 @@ export function formatMessageTime(isoString: string): string {
     return '';
   }
 }
+
+/**
+ * Operational categories for quick-prompt starters
+ */
+export const QuickPromptCategorySchema = z.enum([
+  'inventory',
+  'sales',
+  'customers',
+  'settings',
+]);
+export type QuickPromptCategory = z.infer<typeof QuickPromptCategorySchema>;
+
+/**
+ * Single quick-prompt item schema
+ */
+export const QuickPromptItemSchema = z.object({
+  id: z.string().min(1),
+  category: QuickPromptCategorySchema,
+  categoryLabel: z.string().min(1),
+  shortLabel: z.string().min(1),
+  prompt: z.string().min(1),
+});
+export type QuickPromptItem = z.infer<typeof QuickPromptItemSchema>;
+
+/**
+ * Grouped quick-prompts for categorized UI presentation
+ */
+export interface CategorizedQuickPrompts {
+  category: QuickPromptCategory;
+  categoryLabel: string;
+  items: QuickPromptItem[];
+}
+
+/**
+ * Canonical Curated Quick-Prompt Starters Catalog (Zero-Emoji Guarantee)
+ */
+export const SUGGESTED_QUICK_PROMPTS: readonly QuickPromptItem[] = [
+  {
+    id: 'qp-low-stock',
+    category: 'inventory',
+    categoryLabel: 'Inventory',
+    shortLabel: 'Low stock items',
+    prompt: 'Which products are currently low on stock?',
+  },
+  {
+    id: 'qp-stock-toyo-1l',
+    category: 'inventory',
+    categoryLabel: 'Inventory',
+    shortLabel: '1L Toyo stock',
+    prompt: 'Check current stock count and pricing for 1L Toyo',
+  },
+  {
+    id: 'qp-today-sales',
+    category: 'sales',
+    categoryLabel: 'Sales & Revenue',
+    shortLabel: "Today's sales",
+    prompt: "Summarize today's sales and payment methods",
+  },
+  {
+    id: 'qp-best-sellers',
+    category: 'sales',
+    categoryLabel: 'Sales & Revenue',
+    shortLabel: 'Best sellers',
+    prompt: 'Which condiment sizes had the highest sales volume this week?',
+  },
+  {
+    id: 'qp-overdue-utang',
+    category: 'customers',
+    categoryLabel: 'Customer Credit',
+    shortLabel: 'Overdue utang',
+    prompt: 'Who has overdue utang balances?',
+  },
+  {
+    id: 'qp-all-balances',
+    category: 'customers',
+    categoryLabel: 'Customer Credit',
+    shortLabel: 'Customer balances',
+    prompt: 'List all customers with unpaid balances sorted by amount',
+  },
+  {
+    id: 'qp-store-rules',
+    category: 'settings',
+    categoryLabel: 'Store Rules',
+    shortLabel: 'Reminder rules',
+    prompt: 'What is our current overdue credit reminder policy and SMS schedule?',
+  },
+] as const;
+
+/**
+ * Groups prompt items by operational category maintaining canonical display order
+ */
+export function getGroupedQuickPrompts(
+  prompts: readonly QuickPromptItem[] = SUGGESTED_QUICK_PROMPTS
+): CategorizedQuickPrompts[] {
+  const categoryOrder: QuickPromptCategory[] = [
+    'inventory',
+    'sales',
+    'customers',
+    'settings',
+  ];
+
+  const map = new Map<QuickPromptCategory, { label: string; items: QuickPromptItem[] }>();
+
+  for (const p of prompts) {
+    const existing = map.get(p.category);
+    if (existing) {
+      existing.items.push(p);
+    } else {
+      map.set(p.category, { label: p.categoryLabel, items: [p] });
+    }
+  }
+
+  const result: CategorizedQuickPrompts[] = [];
+  for (const cat of categoryOrder) {
+    const group = map.get(cat);
+    if (group && group.items.length > 0) {
+      result.push({
+        category: cat,
+        categoryLabel: group.label,
+        items: group.items,
+      });
+    }
+  }
+
+  return result;
+}
+
