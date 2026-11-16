@@ -45,6 +45,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
 
   const [status, setStatus] = useState<AssistantStatus>('idle');
   const [inputValue, setInputValue] = useState<string>('');
+  const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
 
   // Sync open state to sessionStorage
   useEffect(() => {
@@ -73,6 +74,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   const clearMessages = useCallback(() => {
     setMessages([]);
     setStatus('idle');
+    setLastFailedQuery(null);
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.removeItem(STORAGE_KEY_MESSAGES);
@@ -91,7 +93,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       const trimmedContent = parseResult.data.content;
       const userMessage = createChatMessage('user', trimmedContent);
 
-      setMessages((prev) => [...prev, userMessage]);
+      // Clean up any trailing error notice before dispatching new question
+      setMessages((prev) => [...prev.filter((m) => m.status !== 'error'), userMessage]);
       setInputValue('');
       setStatus('loading');
 
@@ -100,7 +103,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            messages: [...messages, userMessage].map((m) => ({
+            messages: [...messages.filter((m) => m.status !== 'error'), userMessage].map((m) => ({
               role: m.role,
               content: m.content,
             })),
@@ -115,55 +118,48 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           );
           setMessages((prev) => [...prev, assistantMessage]);
           setStatus('idle');
+          setLastFailedQuery(null);
         } else {
-          // Fallback simulation if route is unreachable
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          let replyContent =
-            'Store operational records are ready for review. You can check the Inventory or Sales tab for current metrics.';
-          const lower = trimmedContent.toLowerCase();
+          const errorData = (await res.json().catch(() => ({}))) as { error?: string };
+          const errorContent =
+            typeof errorData?.error === 'string' && errorData.error.trim()
+              ? errorData.error
+              : 'Unable to process query at this time. Please check network connection or try again.';
 
-          if (lower.includes('stock') || lower.includes('inventory')) {
-            replyContent =
-              'Inventory ledger indicates active stock for Toyo, Suka, and Patis in 350 ml, 1 L, and 1 gal sizes. Check the Inventory monitor for minimum threshold alerts.';
-          } else if (
-            lower.includes('sales') ||
-            lower.includes('revenue') ||
-            lower.includes('today')
-          ) {
-            replyContent =
-              'Sales ledger records all confirmed transactions. Daily totals, receipt numbers, and payment status can be tracked under Sales and Executive Reports.';
-          } else if (
-            lower.includes('utang') ||
-            lower.includes('balance') ||
-            lower.includes('debt') ||
-            lower.includes('customer')
-          ) {
-            replyContent =
-              'Customer accounts ledger tracks outstanding balances and payment history. Review the Utang Tracker under Customers for overdue collection notices.';
-          } else if (
-            lower.includes('price') ||
-            lower.includes('pricing') ||
-            lower.includes('cost')
-          ) {
-            replyContent =
-              'Product catalog defines cost and retail pricing across all condiment variants. Visit Products to adjust margins or review package tiers.';
-          }
-
-          const assistantMessage = createChatMessage('assistant', replyContent);
-          setMessages((prev) => [...prev, assistantMessage]);
-          setStatus('idle');
+          const errorMessage: ChatMessage = {
+            id: `err_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+            role: 'assistant',
+            content: errorContent,
+            timestamp: new Date().toISOString(),
+            status: 'error',
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+          setStatus('error');
+          setLastFailedQuery(trimmedContent);
         }
       } catch {
-        const errorMessage = createChatMessage(
-          'assistant',
-          'Unable to process query at this time. Please check network connection or try again.'
-        );
+        const errorContent =
+          'Unable to process query at this time. Please check network connection or try again.';
+        const errorMessage: ChatMessage = {
+          id: `err_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+          role: 'assistant',
+          content: errorContent,
+          timestamp: new Date().toISOString(),
+          status: 'error',
+        };
         setMessages((prev) => [...prev, errorMessage]);
         setStatus('error');
+        setLastFailedQuery(trimmedContent);
       }
     },
     [inputValue, messages]
   );
+
+  const retryLastMessage = useCallback(() => {
+    if (lastFailedQuery) {
+      sendMessage(lastFailedQuery);
+    }
+  }, [lastFailedQuery, sendMessage]);
 
   return {
     isOpen,
@@ -174,6 +170,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     inputValue,
     setInputValue,
     sendMessage,
+    retryLastMessage,
+    lastFailedQuery,
     clearMessages,
   };
 }

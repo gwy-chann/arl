@@ -12,12 +12,14 @@ export interface AssistantMessageListProps {
   messages: ChatMessage[];
   status: AssistantStatus;
   suggestedPromptsSlot?: React.ReactNode;
+  onRetry?: () => void;
 }
 
 export function AssistantMessageList({
   messages,
   status,
   suggestedPromptsSlot,
+  onRetry,
 }: Readonly<AssistantMessageListProps>) {
   const scrollEndRef = useRef<HTMLDivElement>(null);
 
@@ -52,6 +54,28 @@ export function AssistantMessageList({
         </div>
       ) : (
         messages.map((msg) => {
+          if (msg.status === 'error') {
+            return (
+              <div
+                key={msg.id}
+                data-testid="assistant-error-notice"
+                className="bg-danger-light border border-danger-border text-danger text-xs rounded-md p-2.5 flex items-center justify-between gap-3 shadow-xs"
+              >
+                <span className="flex-1 leading-relaxed">{msg.content}</span>
+                {onRetry && (
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="shrink-0 font-medium text-xs text-danger hover:underline cursor-pointer px-1 py-0.5 select-none"
+                    aria-label="Retry failed request"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            );
+          }
+
           const isUser = msg.role === 'user';
           const time = formatMessageTime(msg.timestamp);
 
@@ -85,13 +109,12 @@ export function AssistantMessageList({
       )}
 
       {status === 'loading' && (
-        <div className="flex flex-col items-start">
-          <div className="bg-bg-surface border border-border px-3.5 py-2.5 rounded-xl rounded-tl-xs shadow-xs">
-            <div className="flex items-center gap-1.5 py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-pulse" />
-              <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-pulse [animation-delay:200ms]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-pulse [animation-delay:400ms]" />
-            </div>
+        <div className="flex flex-col items-start" data-testid="assistant-loading-indicator">
+          <div className="bg-bg-surface border border-border px-3.5 py-2.5 rounded-xl rounded-tl-xs shadow-xs flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-pulse" />
+            <span className="text-text-muted text-xs font-normal select-none">
+              Checking store records...
+            </span>
           </div>
         </div>
       )}

@@ -16,6 +16,7 @@ export interface AssistantPopoverProps {
   inputValue: string;
   onInputChange: (val: string) => void;
   onSendMessage: (val?: string) => void;
+  onRetry?: () => void;
   onClearMessages: () => void;
   onClose: () => void;
   suggestedPromptsSlot?: React.ReactNode;
@@ -27,6 +28,7 @@ export function AssistantPopover({
   inputValue,
   onInputChange,
   onSendMessage,
+  onRetry,
   onClearMessages,
   onClose,
   suggestedPromptsSlot,
@@ -48,6 +50,7 @@ export function AssistantPopover({
       <AssistantMessageList
         messages={messages}
         status={status}
+        onRetry={onRetry}
         suggestedPromptsSlot={
           messages.length === 0
             ? (suggestedPromptsSlot ?? (

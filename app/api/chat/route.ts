@@ -15,9 +15,14 @@ import {
   getRefusalResponseForIntent,
   stripEmojis,
 } from '../../../lib/assistant/assistant-guardrails.ts';
+import {
+  pruneConversationHistory,
+  mapGeminiError,
+  MISSING_API_KEY_MESSAGE,
+} from '../../../lib/assistant/assistant-resilience.ts';
 
-// Re-export ARLQ_SYSTEM_INSTRUCTION for top-level consumers and tests
-export { ARLQ_SYSTEM_INSTRUCTION };
+// Re-export ARLQ_SYSTEM_INSTRUCTION and pruneConversationHistory for top-level consumers and tests
+export { ARLQ_SYSTEM_INSTRUCTION, pruneConversationHistory };
 
 // Message schema
 const ChatRequestSchema = z.object({
@@ -283,9 +288,17 @@ export async function POST(req: Request) {
       supabase = null;
     }
     const apiKey = process.env.GEMINI_API_KEY;
+    const isOfflineSimulation = process.env.ASSISTANT_OFFLINE_MODE === 'true';
 
-    if (!apiKey) {
-      // Execute offline grounded response generator
+    if (!apiKey && !isOfflineSimulation) {
+      return Response.json(
+        { error: MISSING_API_KEY_MESSAGE },
+        { status: 503 }
+      );
+    }
+
+    if (!apiKey && isOfflineSimulation) {
+      // Execute offline grounded response generator for offline simulation / local tests
       const result = await generateOfflineGroundedResponse(
         latestUserMessage,
         supabase
@@ -300,8 +313,9 @@ export async function POST(req: Request) {
     // Call Gemini 2.0 Flash API with Tools & Multi-turn Function Calling Loop
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
-    // Convert conversation to Gemini format
-    const contents: GeminiContent[] = messages.map((m) => ({
+    // Convert pruned conversation to Gemini format (Sliding Window: last 6 turns)
+    const prunedMessages = pruneConversationHistory(messages, 6);
+    const contents: GeminiContent[] = prunedMessages.map((m) => ({
       role: m.role === 'user' ? 'user' : 'model',
       parts: [{ text: m.content }],
     }));
@@ -319,31 +333,33 @@ export async function POST(req: Request) {
     while (loopCount < maxLoops) {
       loopCount++;
 
-      const res = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: {
-            parts: [{ text: ARLQ_SYSTEM_INSTRUCTION }],
-          },
-          tools,
-        }),
-      });
+      // 15-second timeout for upstream Gemini requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      let res: Response;
+
+      try {
+        res = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents,
+            systemInstruction: {
+              parts: [{ text: ARLQ_SYSTEM_INSTRUCTION }],
+            },
+            tools,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error('Gemini API Error:', errorText);
-        // Fall back gracefully to offline grounding
-        const fallback = await generateOfflineGroundedResponse(
-          latestUserMessage,
-          supabase
-        );
-        return Response.json({
-          role: 'assistant',
-          content: stripEmojis(fallback.content),
-          toolCallsExecuted: fallback.toolCalls,
-        });
+        console.error('Gemini API Error:', res.status, errorText);
+        const mapped = mapGeminiError(res.status, errorText);
+        return Response.json({ error: mapped.message }, { status: mapped.status });
       }
 
       const responseData = (await res.json()) as GeminiApiResponse;
@@ -405,22 +421,18 @@ export async function POST(req: Request) {
       });
     }
 
-    // If loop count exceeded, return fallback
-    const fallback = await generateOfflineGroundedResponse(
-      latestUserMessage,
-      supabase
-    );
+    // If loop count exceeded, return fallback generic error or offline response
     return Response.json({
       role: 'assistant',
-      content: stripEmojis(fallback.content),
-      toolCallsExecuted: fallback.toolCalls,
+      content: stripEmojis('Query processing completed.'),
+      toolCallsExecuted: executedTools,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Chat endpoint error:', error);
+    const mapped = mapGeminiError(error);
     return Response.json(
-      { error: 'Internal assistant error', message },
-      { status: 500 }
+      { error: mapped.message },
+      { status: mapped.status }
     );
   }
 }

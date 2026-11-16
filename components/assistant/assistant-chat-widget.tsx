@@ -23,6 +23,7 @@ function AssistantChatWidgetContent({
     inputValue,
     setInputValue,
     sendMessage,
+    retryLastMessage,
     clearMessages,
   } = useAssistantChat({ initialOpen });
 
@@ -54,6 +55,7 @@ function AssistantChatWidgetContent({
       inputValue={inputValue}
       onInputChange={setInputValue}
       onSendMessage={sendMessage}
+      onRetry={retryLastMessage}
       onClearMessages={clearMessages}
       onClose={() => setIsOpen(false)}
       suggestedPromptsSlot={suggestedPromptsSlot}
