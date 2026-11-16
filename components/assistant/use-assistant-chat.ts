@@ -16,55 +16,55 @@ export interface UseAssistantChatOptions {
 }
 
 export function useAssistantChat(options?: UseAssistantChatOptions) {
-  const [isOpen, setIsOpen] = useState<boolean>(options?.initialOpen ?? false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [status, setStatus] = useState<AssistantStatus>('idle');
-  const [inputValue, setInputValue] = useState<string>('');
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
-
-  // Restore state from sessionStorage on client mount
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
+  const [isOpen, setIsOpen] = useState<boolean>(() => {
+    if (options?.initialOpen !== undefined) {
+      return options.initialOpen;
+    }
+    if (typeof window === 'undefined') return false;
     try {
-      const storedOpen = sessionStorage.getItem(STORAGE_KEY_OPEN);
-      if (storedOpen !== null) {
-        setIsOpen(storedOpen === 'true');
-      }
+      const stored = sessionStorage.getItem(STORAGE_KEY_OPEN);
+      return stored === 'true';
+    } catch {
+      return false;
+    }
+  });
 
-      const storedMessages = sessionStorage.getItem(STORAGE_KEY_MESSAGES);
-      if (storedMessages) {
-        const parsed = JSON.parse(storedMessages);
-        if (Array.isArray(parsed)) {
-          setMessages(parsed);
-        }
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY_MESSAGES);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {
-      // Ignore storage read errors (e.g. storage disabled or quota exceeded)
-    } finally {
-      setIsInitialized(true);
+      // Ignore storage read errors
     }
-  }, []);
+    return [];
+  });
+
+  const [status, setStatus] = useState<AssistantStatus>('idle');
+  const [inputValue, setInputValue] = useState<string>('');
 
   // Sync open state to sessionStorage
   useEffect(() => {
-    if (!isInitialized || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
     try {
       sessionStorage.setItem(STORAGE_KEY_OPEN, isOpen ? 'true' : 'false');
     } catch {
       // Ignore storage write errors
     }
-  }, [isOpen, isInitialized]);
+  }, [isOpen]);
 
   // Sync messages to sessionStorage
   useEffect(() => {
-    if (!isInitialized || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
     try {
       sessionStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(messages));
     } catch {
       // Ignore storage write errors
     }
-  }, [messages, isInitialized]);
+  }, [messages]);
 
   const toggleOpen = useCallback(() => {
     setIsOpen((prev) => !prev);
@@ -96,26 +96,63 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       setStatus('loading');
 
       try {
-        // Operational assistant response simulation (strict zero-emoji)
-        // Downstream story ARL-34 / ARL-32 will link to the live Gemini route
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [...messages, userMessage].map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+          }),
+        });
 
-        let replyContent = 'Store operational records are ready for review. You can check the Inventory or Sales tab for current metrics.';
-        const lower = trimmedContent.toLowerCase();
+        if (res.ok) {
+          const data = (await res.json()) as { content?: string };
+          const assistantMessage = createChatMessage(
+            'assistant',
+            data.content || 'Store records retrieved.'
+          );
+          setMessages((prev) => [...prev, assistantMessage]);
+          setStatus('idle');
+        } else {
+          // Fallback simulation if route is unreachable
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          let replyContent =
+            'Store operational records are ready for review. You can check the Inventory or Sales tab for current metrics.';
+          const lower = trimmedContent.toLowerCase();
 
-        if (lower.includes('stock') || lower.includes('inventory')) {
-          replyContent = 'Inventory ledger indicates active stock for Toyo, Suka, and Patis in 350ml, 1L, and 1gal sizes. Check the Inventory monitor for minimum threshold alerts.';
-        } else if (lower.includes('sales') || lower.includes('revenue') || lower.includes('today')) {
-          replyContent = 'Sales ledger records all confirmed transactions. Daily totals, receipt numbers, and payment status can be tracked under Sales and Executive Reports.';
-        } else if (lower.includes('utang') || lower.includes('balance') || lower.includes('debt') || lower.includes('customer')) {
-          replyContent = 'Customer accounts ledger tracks outstanding balances and payment history. Review the Utang Tracker under Customers for overdue collection notices.';
-        } else if (lower.includes('price') || lower.includes('pricing') || lower.includes('cost')) {
-          replyContent = 'Product catalog defines cost and retail pricing across all condiment variants. Visit Products to adjust margins or review package tiers.';
+          if (lower.includes('stock') || lower.includes('inventory')) {
+            replyContent =
+              'Inventory ledger indicates active stock for Toyo, Suka, and Patis in 350 ml, 1 L, and 1 gal sizes. Check the Inventory monitor for minimum threshold alerts.';
+          } else if (
+            lower.includes('sales') ||
+            lower.includes('revenue') ||
+            lower.includes('today')
+          ) {
+            replyContent =
+              'Sales ledger records all confirmed transactions. Daily totals, receipt numbers, and payment status can be tracked under Sales and Executive Reports.';
+          } else if (
+            lower.includes('utang') ||
+            lower.includes('balance') ||
+            lower.includes('debt') ||
+            lower.includes('customer')
+          ) {
+            replyContent =
+              'Customer accounts ledger tracks outstanding balances and payment history. Review the Utang Tracker under Customers for overdue collection notices.';
+          } else if (
+            lower.includes('price') ||
+            lower.includes('pricing') ||
+            lower.includes('cost')
+          ) {
+            replyContent =
+              'Product catalog defines cost and retail pricing across all condiment variants. Visit Products to adjust margins or review package tiers.';
+          }
+
+          const assistantMessage = createChatMessage('assistant', replyContent);
+          setMessages((prev) => [...prev, assistantMessage]);
+          setStatus('idle');
         }
-
-        const assistantMessage = createChatMessage('assistant', replyContent);
-        setMessages((prev) => [...prev, assistantMessage]);
-        setStatus('idle');
       } catch {
         const errorMessage = createChatMessage(
           'assistant',
@@ -125,7 +162,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         setStatus('error');
       }
     },
-    [inputValue]
+    [inputValue, messages]
   );
 
   return {

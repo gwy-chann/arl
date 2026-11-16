@@ -16,6 +16,7 @@ export function AssistantLauncherPill({ onClick }: Readonly<AssistantLauncherPil
       aria-expanded={false}
       aria-haspopup="dialog"
       aria-label="Open Store Assistant"
+      suppressHydrationWarning
       className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-bg-surface text-text-primary border border-border shadow-md hover:bg-bg-hover hover:border-border-subtle transition-all duration-200 cursor-pointer select-none text-xs sm:text-sm font-medium focus:outline-hidden focus:border-border-focus"
     >
       <span className="relative flex h-2 w-2">

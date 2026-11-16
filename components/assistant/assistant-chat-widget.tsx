@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { useIsMounted } from '@/lib/modal-utils';
 import { useAssistantChat } from './use-assistant-chat';
 import { AssistantLauncherPill } from './assistant-launcher-pill';
 import { AssistantPopover } from './assistant-popover';
@@ -10,7 +11,7 @@ export interface AssistantChatWidgetProps {
   suggestedPromptsSlot?: React.ReactNode;
 }
 
-export function AssistantChatWidget({
+function AssistantChatWidgetContent({
   initialOpen = false,
   suggestedPromptsSlot,
 }: Readonly<AssistantChatWidgetProps>) {
@@ -58,4 +59,14 @@ export function AssistantChatWidget({
       suggestedPromptsSlot={suggestedPromptsSlot}
     />
   );
+}
+
+export function AssistantChatWidget(props: Readonly<AssistantChatWidgetProps>) {
+  const isMounted = useIsMounted();
+
+  if (!isMounted) {
+    return null;
+  }
+
+  return <AssistantChatWidgetContent {...props} />;
 }
