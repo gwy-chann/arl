@@ -9,6 +9,15 @@ import {
   type StoreSettingsResult,
 } from '../../../lib/assistant/assistant-grounding-contracts.ts';
 import { executeToolCall } from '../../../lib/assistant/assistant-tools.ts';
+import {
+  ARLQ_SYSTEM_INSTRUCTION,
+  classifyQueryIntent,
+  getRefusalResponseForIntent,
+  stripEmojis,
+} from '../../../lib/assistant/assistant-guardrails.ts';
+
+// Re-export ARLQ_SYSTEM_INSTRUCTION for top-level consumers and tests
+export { ARLQ_SYSTEM_INSTRUCTION };
 
 // Message schema
 const ChatRequestSchema = z.object({
@@ -21,20 +30,6 @@ const ChatRequestSchema = z.object({
     )
     .min(1),
 });
-
-/**
- * System instruction defining ARLQ Store Assistant persona and grounding constraints.
- */
-const SYSTEM_INSTRUCTION = `You are the official in-app AI operational assistant for ARLQ Store, a wholesale and retail distributor of Philippine condiments (Toyo, Suka, Patis in 350 ml, 1 L, and 1 gal packaging).
-Your responsibility is to answer operational questions regarding store inventory, sales revenue, customer debt (utang), and store settings.
-
-Strict Grounding Rules:
-1. Always ground your answers using the provided read-only tools: getInventorySummary, getSalesOverview, getCustomerBalances, and getStoreSettings.
-2. Never invent, guess, or hallucinate numbers, prices, stock quantities, or debt figures.
-3. Currency must always be formatted in Philippine Peso (e.g. ₱1,250.00).
-4. Packaging sizes must strictly be written as '350 ml', '1 L', or '1 gal'.
-5. Absolute Read-Only Security: You cannot create, update, delete, or alter any store records. If asked to modify data, state that all changes must be made via store forms.
-6. Zero Emojis: You must NEVER include emojis in your responses.`;
 
 interface GeminiPart {
   text?: string;
@@ -70,6 +65,16 @@ async function generateOfflineGroundedResponse(
   latestMessage: string,
   client?: SupabaseClient | null
 ): Promise<{ content: string; toolCalls: string[] }> {
+  // Check guardrails first
+  const intent = classifyQueryIntent(latestMessage);
+  const refusal = getRefusalResponseForIntent(intent);
+  if (refusal) {
+    return {
+      content: stripEmojis(refusal),
+      toolCalls: [],
+    };
+  }
+
   const query = latestMessage.toLowerCase();
   const executedTools: string[] = [];
 
@@ -255,6 +260,19 @@ export async function POST(req: Request) {
     const { messages } = parsed.data;
     const latestUserMessage =
       [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+
+    // Pre-flight guardrail check: Intercept out-of-scope, mutation, or adversarial prompts
+    const queryIntent = classifyQueryIntent(latestUserMessage);
+    const refusalMessage = getRefusalResponseForIntent(queryIntent);
+
+    if (refusalMessage) {
+      return Response.json({
+        role: 'assistant',
+        content: stripEmojis(refusalMessage),
+        toolCallsExecuted: [],
+      });
+    }
+
     let supabase: SupabaseClient | null = null;
     try {
       const { getSafeSupabaseClient } = await import(
@@ -274,7 +292,7 @@ export async function POST(req: Request) {
       );
       return Response.json({
         role: 'assistant',
-        content: result.content,
+        content: stripEmojis(result.content),
         toolCallsExecuted: result.toolCalls,
       });
     }
@@ -307,7 +325,7 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           contents,
           systemInstruction: {
-            parts: [{ text: SYSTEM_INSTRUCTION }],
+            parts: [{ text: ARLQ_SYSTEM_INSTRUCTION }],
           },
           tools,
         }),
@@ -323,7 +341,7 @@ export async function POST(req: Request) {
         );
         return Response.json({
           role: 'assistant',
-          content: fallback.content,
+          content: stripEmojis(fallback.content),
           toolCallsExecuted: fallback.toolCalls,
         });
       }
@@ -382,7 +400,7 @@ export async function POST(req: Request) {
 
       return Response.json({
         role: 'assistant',
-        content: outputText,
+        content: stripEmojis(outputText),
         toolCallsExecuted: executedTools,
       });
     }
@@ -394,7 +412,7 @@ export async function POST(req: Request) {
     );
     return Response.json({
       role: 'assistant',
-      content: fallback.content,
+      content: stripEmojis(fallback.content),
       toolCallsExecuted: fallback.toolCalls,
     });
   } catch (error: unknown) {
