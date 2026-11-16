@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { LoginForm } from './login-form';
@@ -42,10 +43,13 @@ export default async function LoginPage(props: Readonly<LoginPageProps>) {
       {/* Brand Hero Sidebar */}
       <section className="login-brand">
         <div className="top">
-          <div
-            className="logo-mark"
-            role="img"
-            aria-label="ARL Quality logo"
+          <Image
+            src="/logo.png"
+            alt="ARL Quality logo"
+            width={340}
+            height={140}
+            priority
+            className="w-[min(340px,90%)] h-auto mx-auto mb-9 object-contain"
           />
           <div>
             <h1>Know what’s on the shelf and who still owes you.</h1>
