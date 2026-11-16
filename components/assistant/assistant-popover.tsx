@@ -8,6 +8,7 @@ import {
 import { AssistantHeader } from './assistant-header';
 import { AssistantMessageList } from './assistant-message-list';
 import { AssistantInputBar } from './assistant-input-bar';
+import { SuggestedQuestions } from './suggested-questions';
 
 export interface AssistantPopoverProps {
   messages: ChatMessage[];
@@ -44,15 +45,20 @@ export function AssistantPopover({
         onMinimize={onClose}
       />
 
-      <AssistantMessageList messages={messages} status={status} />
-
-      {/* Extension slot for ARL-31 Suggested Question Chips */}
-      <div
-        data-testid="assistant-suggested-prompts"
-        className="empty:hidden border-t border-border/40 bg-bg-surface"
-      >
-        {suggestedPromptsSlot}
-      </div>
+      <AssistantMessageList
+        messages={messages}
+        status={status}
+        suggestedPromptsSlot={
+          messages.length === 0
+            ? (suggestedPromptsSlot ?? (
+                <SuggestedQuestions
+                  onSelectPrompt={(prompt) => onSendMessage(prompt)}
+                  disabled={status === 'loading'}
+                />
+              ))
+            : null
+        }
+      />
 
       <AssistantInputBar
         value={inputValue}

@@ -11,11 +11,13 @@ import {
 export interface AssistantMessageListProps {
   messages: ChatMessage[];
   status: AssistantStatus;
+  suggestedPromptsSlot?: React.ReactNode;
 }
 
 export function AssistantMessageList({
   messages,
   status,
+  suggestedPromptsSlot,
 }: Readonly<AssistantMessageListProps>) {
   const scrollEndRef = useRef<HTMLDivElement>(null);
 
@@ -33,9 +35,20 @@ export function AssistantMessageList({
       className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-bg-base/40 focus:outline-hidden"
     >
       {messages.length === 0 ? (
-        <div className="flex flex-col items-start gap-2 p-3.5 rounded-lg bg-bg-surface border border-border text-text-secondary text-xs leading-relaxed shadow-xs">
-          <p className="font-medium text-text-primary">Welcome to Store Assistant</p>
-          <p>{DEFAULT_WELCOME_MESSAGE}</p>
+        <div className="space-y-3.5">
+          <div className="flex flex-col items-start gap-2 p-3.5 rounded-lg bg-bg-surface border border-border text-text-secondary text-xs leading-relaxed shadow-xs">
+            <p className="font-medium text-text-primary">Welcome to Store Assistant</p>
+            <p>{DEFAULT_WELCOME_MESSAGE}</p>
+          </div>
+
+          {suggestedPromptsSlot && (
+            <div
+              data-testid="assistant-suggested-prompts"
+              className="animate-in fade-in duration-200"
+            >
+              {suggestedPromptsSlot}
+            </div>
+          )}
         </div>
       ) : (
         messages.map((msg) => {
