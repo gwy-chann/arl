@@ -317,5 +317,40 @@ describe('Read-Only Database Grounding Tools (ARL-32)', () => {
       assert.strictEqual(data.role, 'assistant');
       assert.strictEqual(data.toolCallsExecuted.includes('getCustomerBalances'), true);
     });
+
+    test('POST /api/chat accurately routes "how much is aling nena\'s balance" to customer balances', async () => {
+      const req = new Request('http://localhost/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: "how much is aling nena's balance?" }],
+        }),
+      });
+
+      const res = await POST(req);
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.role, 'assistant');
+      assert.strictEqual(data.toolCallsExecuted.includes('getCustomerBalances'), true);
+      assert.strictEqual(data.content.includes("Aling Nena"), true);
+      assert.strictEqual(data.content.includes("₱1,340.00"), true);
+    });
+
+    test('POST /api/chat handles "how much does aling nena owe" accurately', async () => {
+      const req = new Request('http://localhost/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'how much does aling nena owe?' }],
+        }),
+      });
+
+      const res = await POST(req);
+      assert.strictEqual(res.status, 200);
+      const data = await res.json();
+      assert.strictEqual(data.role, 'assistant');
+      assert.strictEqual(data.toolCallsExecuted.includes('getCustomerBalances'), true);
+      assert.strictEqual(data.content.includes("Aling Nena"), true);
+    });
   });
 });

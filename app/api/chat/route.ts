@@ -83,14 +83,144 @@ async function generateOfflineGroundedResponse(
   const query = latestMessage.toLowerCase();
   const executedTools: string[] = [];
 
-  // Low stock / inventory check
+  // 1. Customer Utang / Debt / Overdue / Balance check
+  if (
+    query.includes('utang') ||
+    query.includes('debt') ||
+    query.includes('overdue') ||
+    query.includes('balance') ||
+    query.includes('owe') ||
+    query.includes('owing') ||
+    query.includes('credit') ||
+    query.includes('customer') ||
+    query.includes('nena') ||
+    query.includes('jun') ||
+    query.includes('tonyo') ||
+    query.includes('lechon') ||
+    (query.includes('who') && (query.includes('pay') || query.includes('unpaid')))
+  ) {
+    executedTools.push('getCustomerBalances');
+    const overdueOnly = query.includes('overdue');
+
+    // Detect if a specific customer name is queried
+    let searchCustomer: string | undefined = undefined;
+    if (query.includes('nena')) searchCustomer = 'Nena';
+    else if (query.includes('jun')) searchCustomer = 'Jun-Jun';
+    else if (query.includes('tonyo')) searchCustomer = 'Tonyo';
+    else if (query.includes('boy') || query.includes('lechon')) searchCustomer = 'Tito Boy';
+
+    const data = (await executeToolCall(
+      'getCustomerBalances',
+      { overdueOnly, customerName: searchCustomer },
+      client
+    )) as CustomerBalancesResult;
+
+    if (data.customers.length === 0) {
+      if (searchCustomer) {
+        return {
+          content: `No customer records matching "${searchCustomer}" currently have an outstanding debt or unpaid balance.`,
+          toolCalls: executedTools,
+        };
+      }
+      return {
+        content: overdueOnly
+          ? 'There are currently no customers with overdue balances past the reminder threshold.'
+          : 'There are currently no customers with outstanding debt balances.',
+        toolCalls: executedTools,
+      };
+    }
+
+    if (searchCustomer && data.customers.length === 1) {
+      const c = data.customers[0];
+      return {
+        content: `${c.name} currently has an outstanding balance of ${c.formattedTotalBalance} (${c.oldestUnpaidDays} days unpaid${c.isOverdue ? ', overdue' : ''}).`,
+        toolCalls: executedTools,
+      };
+    }
+
+    const customerDetails = data.customers
+      .map(
+        (c) =>
+          `• ${c.name}: ${c.formattedTotalBalance} (${c.oldestUnpaidDays} days unpaid${
+            c.isOverdue ? ', overdue' : ''
+          })`
+      )
+      .join('\n');
+
+    return {
+      content: searchCustomer
+        ? `Found ${data.customers.length} customer account(s) matching "${searchCustomer}":\n${customerDetails}`
+        : `Total outstanding debt is ${data.formattedOutstandingDebt} across ${data.totalIndebtedCustomers} customer(s):\n${customerDetails}`,
+      toolCalls: executedTools,
+    };
+  }
+
+  // 2. Sales / revenue
+  if (
+    query.includes('sale') ||
+    query.includes('revenue') ||
+    query.includes('collected') ||
+    query.includes('transaction') ||
+    query.includes('income') ||
+    ((query.includes('today') || query.includes('yesterday') || query.includes('week') || query.includes('month')) &&
+      (query.includes('how much') || query.includes('total') || query.includes('made') || query.includes('earned')))
+  ) {
+    executedTools.push('getSalesOverview');
+    const timeframe = query.includes('yesterday')
+      ? 'yesterday'
+      : query.includes('week') || query.includes('7 days')
+      ? 'last_7_days'
+      : query.includes('month')
+      ? 'current_month'
+      : 'today';
+
+    const data = (await executeToolCall(
+      'getSalesOverview',
+      { timeframe },
+      client
+    )) as SalesOverviewResult;
+    return {
+      content: `Sales summary for ${data.timeframe}:\n• Transactions: ${data.totalSalesCount} recorded\n• Gross Revenue: ${data.formattedGrossRevenue}\n• Cash Collected: ${data.formattedCashCollected}\n• Outstanding Balance: ${data.formattedOutstandingBalance}`,
+      toolCalls: executedTools,
+    };
+  }
+
+  // 3. Store settings
+  if (
+    query.includes('setting') ||
+    query.includes('threshold') ||
+    query.includes('sms') ||
+    query.includes('policy') ||
+    query.includes('phone') ||
+    query.includes('reminder')
+  ) {
+    executedTools.push('getStoreSettings');
+    const data = (await executeToolCall(
+      'getStoreSettings',
+      {},
+      client
+    )) as StoreSettingsResult;
+    return {
+      content: `Store configuration for ${data.storeName}:\n• Overdue Reminder Limit: ${data.overdueReminderDays} days\n• Notification Mobile: ${data.reminderPhone}\n• SMS Alerts: ${data.smsNotificationEnabled ? 'Enabled' : 'Disabled'}`,
+      toolCalls: executedTools,
+    };
+  }
+
+  // 4. Low stock / inventory check
   if (
     query.includes('low') ||
     query.includes('stock') ||
     query.includes('inventory') ||
+    query.includes('price') ||
+    query.includes('pricing') ||
+    query.includes('cost') ||
+    query.includes('toyo') ||
+    query.includes('suka') ||
+    query.includes('patis') ||
+    query.includes('bottle') ||
+    query.includes('variant') ||
     query.includes('how many') ||
-    query.includes('how much') ||
-    query.includes('price')
+    query.includes('how much')
   ) {
     executedTools.push('getInventorySummary');
     const isLowOnly =
@@ -147,95 +277,9 @@ async function generateOfflineGroundedResponse(
       )
       .join('\n');
     return {
-      content: `Current stock and pricing:\n${itemDescriptions}`,
-      toolCalls: executedTools,
-    };
-  }
-
-  // Sales / revenue
-  if (
-    query.includes('sale') ||
-    query.includes('revenue') ||
-    query.includes('today') ||
-    query.includes('yesterday') ||
-    query.includes('collected')
-  ) {
-    executedTools.push('getSalesOverview');
-    const timeframe = query.includes('yesterday')
-      ? 'yesterday'
-      : query.includes('week') || query.includes('7 days')
-      ? 'last_7_days'
-      : query.includes('month')
-      ? 'current_month'
-      : 'today';
-
-    const data = (await executeToolCall(
-      'getSalesOverview',
-      { timeframe },
-      client
-    )) as SalesOverviewResult;
-    return {
-      content: `Sales summary for ${data.timeframe}:\n• Transactions: ${data.totalSalesCount} recorded\n• Gross Revenue: ${data.formattedGrossRevenue}\n• Cash Collected: ${data.formattedCashCollected}\n• Outstanding Balance: ${data.formattedOutstandingBalance}`,
-      toolCalls: executedTools,
-    };
-  }
-
-  // Utang / Debt / Overdue
-  if (
-    query.includes('utang') ||
-    query.includes('debt') ||
-    query.includes('overdue') ||
-    query.includes('balance') ||
-    query.includes('customer') ||
-    query.includes('who')
-  ) {
-    executedTools.push('getCustomerBalances');
-    const overdueOnly = query.includes('overdue');
-    const data = (await executeToolCall(
-      'getCustomerBalances',
-      { overdueOnly },
-      client
-    )) as CustomerBalancesResult;
-
-    if (data.customers.length === 0) {
-      return {
-        content: overdueOnly
-          ? 'There are currently no customers with overdue balances past the reminder threshold.'
-          : 'There are currently no customers with outstanding debt balances.',
-        toolCalls: executedTools,
-      };
-    }
-
-    const customerDetails = data.customers
-      .map(
-        (c) =>
-          `• ${c.name}: ${c.formattedTotalBalance} (${c.oldestUnpaidDays} days unpaid${
-            c.isOverdue ? ', overdue' : ''
-          })`
-      )
-      .join('\n');
-
-    return {
-      content: `Total outstanding debt is ${data.formattedOutstandingDebt} across ${data.totalIndebtedCustomers} customer(s):\n${customerDetails}`,
-      toolCalls: executedTools,
-    };
-  }
-
-  // Store settings
-  if (
-    query.includes('setting') ||
-    query.includes('threshold') ||
-    query.includes('sms') ||
-    query.includes('policy')
-  ) {
-    executedTools.push('getStoreSettings');
-    const data = (await executeToolCall(
-      'getStoreSettings',
-      {},
-      client
-    )) as StoreSettingsResult;
-    return {
-      content: `Store configuration for ${data.storeName}:\n• Overdue Reminder Limit: ${data.overdueReminderDays} days\n• Notification Mobile: ${data.reminderPhone}\n• SMS Alerts: ${data.smsNotificationEnabled ? 'Enabled' : 'Disabled'}`,
+      content: searchCondiment
+        ? `Current stock and pricing for ${searchCondiment}:\n${itemDescriptions}`
+        : `Current stock and pricing:\n${itemDescriptions}`,
       toolCalls: executedTools,
     };
   }
