@@ -131,11 +131,11 @@ async function generateOfflineGroundedResponse(
       const itemDescriptions = data.items
         .map(
           (i) =>
-            `${i.productName} ${i.size} (${i.stockQuantity} remaining, minimum ${i.minStockLevel})`
+            `• ${i.productName} ${i.size} (${i.stockQuantity} remaining, minimum ${i.minStockLevel})`
         )
-        .join(', ');
+        .join('\n');
       return {
-        content: `The following items are currently low on stock: ${itemDescriptions}.`,
+        content: `The following items are currently low on stock:\n${itemDescriptions}`,
         toolCalls: executedTools,
       };
     }
@@ -143,11 +143,11 @@ async function generateOfflineGroundedResponse(
     const itemDescriptions = data.items
       .map(
         (i) =>
-          `${i.productName} ${i.size} is priced at ${i.formattedSellingPrice} with ${i.stockQuantity} units in stock`
+          `• ${i.productName} ${i.size}: ${i.formattedSellingPrice} (${i.stockQuantity} in stock)`
       )
-      .join('; ');
+      .join('\n');
     return {
-      content: `Current stock and pricing: ${itemDescriptions}.`,
+      content: `Current stock and pricing:\n${itemDescriptions}`,
       toolCalls: executedTools,
     };
   }
@@ -175,7 +175,7 @@ async function generateOfflineGroundedResponse(
       client
     )) as SalesOverviewResult;
     return {
-      content: `Sales summary for ${data.timeframe}: ${data.totalSalesCount} transactions recorded totaling ${data.formattedGrossRevenue} gross revenue (${data.formattedCashCollected} cash collected, ${data.formattedOutstandingBalance} outstanding balance).`,
+      content: `Sales summary for ${data.timeframe}:\n• Transactions: ${data.totalSalesCount} recorded\n• Gross Revenue: ${data.formattedGrossRevenue}\n• Cash Collected: ${data.formattedCashCollected}\n• Outstanding Balance: ${data.formattedOutstandingBalance}`,
       toolCalls: executedTools,
     };
   }
@@ -209,14 +209,14 @@ async function generateOfflineGroundedResponse(
     const customerDetails = data.customers
       .map(
         (c) =>
-          `${c.name}: ${c.formattedTotalBalance} (${c.oldestUnpaidDays} days unpaid${
+          `• ${c.name}: ${c.formattedTotalBalance} (${c.oldestUnpaidDays} days unpaid${
             c.isOverdue ? ', overdue' : ''
           })`
       )
-      .join('; ');
+      .join('\n');
 
     return {
-      content: `Total outstanding debt is ${data.formattedOutstandingDebt} across ${data.totalIndebtedCustomers} customer(s): ${customerDetails}.`,
+      content: `Total outstanding debt is ${data.formattedOutstandingDebt} across ${data.totalIndebtedCustomers} customer(s):\n${customerDetails}`,
       toolCalls: executedTools,
     };
   }
@@ -235,11 +235,7 @@ async function generateOfflineGroundedResponse(
       client
     )) as StoreSettingsResult;
     return {
-      content: `Store configuration for ${data.storeName}: Overdue reminder limit is set to ${
-        data.overdueReminderDays
-      } days, notification mobile is ${data.reminderPhone}, and SMS alerts are ${
-        data.smsNotificationEnabled ? 'enabled' : 'disabled'
-      }.`,
+      content: `Store configuration for ${data.storeName}:\n• Overdue Reminder Limit: ${data.overdueReminderDays} days\n• Notification Mobile: ${data.reminderPhone}\n• SMS Alerts: ${data.smsNotificationEnabled ? 'Enabled' : 'Disabled'}`,
       toolCalls: executedTools,
     };
   }
