@@ -524,7 +524,9 @@ export async function createCustomer(
         .select('*')
         .single();
 
-      if (!error && data) {
+      if (error) {
+        console.warn('Supabase create customer error:', error.message || error);
+      } else if (data) {
         const created: CustomerWithRollup = {
           id: data.id,
           name: data.name,
@@ -580,7 +582,9 @@ export async function updateCustomer(
         .select('*')
         .single();
 
-      if (!error && data) {
+      if (error) {
+        console.warn('Supabase create customer error:', error.message || error);
+      } else if (data) {
         const existing = memoryCustomers.find((c) => c.id === id);
         const updated: CustomerWithRollup = {
           id: data.id,

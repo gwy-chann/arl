@@ -22,6 +22,8 @@ export async function submitNewSale(input: CreateSaleInput) {
       revalidatePath('/sales/new');
       revalidatePath('/inventory');
       revalidatePath('/customers');
+      revalidatePath('/customers/balances');
+      revalidatePath('/reports/balances');
       revalidatePath('/dashboard');
     }
 
@@ -48,6 +50,8 @@ export async function updateSalePaymentAction(input: UpdateSalePaymentInput) {
       revalidatePath('/sales');
       revalidatePath(`/sales/${input.saleId}`);
       revalidatePath('/customers');
+      revalidatePath('/customers/balances');
+      revalidatePath('/reports/balances');
       revalidatePath('/dashboard');
     }
 
@@ -73,6 +77,8 @@ export async function updateSaleOrderStatusAction(input: UpdateSaleOrderStatusIn
       revalidatePath('/sales');
       revalidatePath(`/sales/${input.saleId}`);
       revalidatePath('/customers');
+      revalidatePath('/customers/balances');
+      revalidatePath('/reports/balances');
       revalidatePath('/dashboard');
     }
 
