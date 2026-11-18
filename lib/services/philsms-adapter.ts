@@ -290,6 +290,7 @@ export async function sendSmsViaPhilSms(options: PhilSmsSendOptions): Promise<Ph
         Accept: 'application/json',
       },
       body: JSON.stringify(requestBody),
+      signal: options.signal,
     });
 
     const responseText = await response.text();

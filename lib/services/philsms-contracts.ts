@@ -58,6 +58,7 @@ export interface PhilSmsSendOptions {
   message: string;
   senderId?: string;
   bypassNormalization?: boolean;
+  signal?: AbortSignal;
 }
 
 export interface PhilSmsSendResult {
