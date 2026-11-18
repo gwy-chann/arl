@@ -223,10 +223,18 @@ function mapVariantRow(row: SupabaseVariantRow): ProductVariantDTO {
   };
 }
 
+export function normalizeSizeKey(s: string): string {
+  const lower = s.trim().toLowerCase();
+  if (lower === '350' || lower === '350 ml' || lower === '350ml') return '350';
+  if (lower === '1l' || lower === '1 l' || lower === '1 liter' || lower === '1liter') return '1L';
+  if (lower === 'gal' || lower === '1 gal' || lower === '1gal' || lower === '1 gallon' || lower === 'gallon') return 'gal';
+  return s.trim();
+}
+
 function sortVariants(variants: ProductVariantDTO[]): ProductVariantDTO[] {
   const order: Record<string, number> = { '350': 0, '1L': 1, gal: 2 };
   return [...variants].sort(
-    (a, b) => (order[a.size] ?? 99) - (order[b.size] ?? 99)
+    (a, b) => (order[normalizeSizeKey(a.size)] ?? 99) - (order[normalizeSizeKey(b.size)] ?? 99)
   );
 }
 
@@ -347,10 +355,78 @@ export class ProductService {
   }
 
   /**
-   * Atomically creates a new product and its 3 standard packaging variants.
+   * Retrieves a product by name (case-insensitive).
+   */
+  async getProductByName(name: string): Promise<ProductWithVariants | null> {
+    const trimmed = name.trim().toLowerCase();
+    if (!this.supabase) {
+      return (
+        inMemoryProducts.find((p) => p.name.trim().toLowerCase() === trimmed) ||
+        null
+      );
+    }
+
+    try {
+      const { data, error } = await this.supabase
+        .from('products')
+        .select('id')
+        .ilike('name', name.trim())
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data) {
+        return (
+          inMemoryProducts.find(
+            (p) => p.name.trim().toLowerCase() === trimmed
+          ) || null
+        );
+      }
+
+      return await this.getProductById(data.id);
+    } catch {
+      return (
+        inMemoryProducts.find((p) => p.name.trim().toLowerCase() === trimmed) ||
+        null
+      );
+    }
+  }
+
+  /**
+   * Atomically creates a new product and its packaging variants.
+   * If a product with the same name already exists, merges/adds the new variants into it.
    */
   async createProduct(input: CreateProductInput): Promise<ProductWithVariants> {
     const validated = productInputSchema.parse(input);
+
+    // If a product with this name already exists, add/merge variants into it
+    const existing = await this.getProductByName(validated.name);
+    if (existing) {
+      const existingNormalized = new Set(
+        existing.variants.map((ev) => normalizeSizeKey(ev.size).toLowerCase())
+      );
+
+      const mergedVariants = [
+        ...existing.variants.map((ev) => ({
+          id: ev.id,
+          size: ev.size,
+          cost_price: ev.cost_price,
+          selling_price: ev.selling_price,
+          min_stock_level: ev.min_stock_level,
+          opening_stock: ev.stock_quantity,
+        })),
+        ...validated.variants.filter(
+          (nv) =>
+            !existingNormalized.has(normalizeSizeKey(nv.size).toLowerCase())
+        ),
+      ];
+
+      return await this.updateProduct({
+        id: existing.id,
+        name: existing.name,
+        category_id: validated.category_id ?? existing.category_id,
+        variants: mergedVariants,
+      });
+    }
 
     if (!this.supabase) {
       const newId = `prod-${Date.now()}`;
@@ -495,11 +571,18 @@ export class ProductService {
 
       existing.variants = sortVariants(
         validated.variants.map((v) => {
-          const oldVar = existing.variants.find((ov) => ov.size === v.size);
+          let oldVar = v.id ? existing.variants.find((ov) => ov.id === v.id) : undefined;
+          if (!oldVar) {
+            oldVar = existing.variants.find(
+              (ov) =>
+                ov.size.toLowerCase().trim() === v.size.toLowerCase().trim() ||
+                normalizeSizeKey(ov.size).toLowerCase() === normalizeSizeKey(v.size).toLowerCase()
+            );
+          }
           const cost = Number(v.cost_price);
           const price = Number(v.selling_price);
           return {
-            id: oldVar ? oldVar.id : `var-${existing.id}-${v.size}`,
+            id: oldVar ? oldVar.id : `var-${existing.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             product_id: existing.id,
             size: v.size as ProductSizeKey,
             cost_price: cost,
@@ -538,29 +621,39 @@ export class ProductService {
         .select('*')
         .eq('product_id', input.id);
 
-      const existingMap = new Map(
-        (existingVariantsData || []).map((row) => [row.size, row])
+      const existingById = new Map(
+        (existingVariantsData || []).map((row) => [row.id, row])
       );
-      const incomingSizes = new Set(validated.variants.map((v) => v.size));
+      const existingBySize = new Map(
+        (existingVariantsData || []).map((row) => [normalizeSizeKey(row.size).toLowerCase(), row])
+      );
+
+      const matchedOldIds = new Set<string>();
 
       // 3. Upsert / Insert / Update variants
       for (const v of validated.variants) {
-        if (existingMap.has(v.size)) {
+        let existingRow = v.id ? existingById.get(v.id) : undefined;
+        if (!existingRow) {
+          existingRow = existingBySize.get(normalizeSizeKey(v.size).toLowerCase());
+        }
+
+        if (existingRow) {
+          matchedOldIds.add(existingRow.id);
           await this.supabase
             .from('product_variants')
             .update({
+              size: v.size.trim(),
               cost_price: v.cost_price,
               selling_price: v.selling_price,
               min_stock_level: v.min_stock_level,
             })
-            .eq('product_id', input.id)
-            .eq('size', v.size);
+            .eq('id', existingRow.id);
         } else {
           await this.supabase
             .from('product_variants')
             .insert({
               product_id: input.id,
-              size: v.size,
+              size: v.size.trim(),
               cost_price: v.cost_price,
               selling_price: v.selling_price,
               stock_quantity: v.opening_stock ?? 0,
@@ -570,8 +663,8 @@ export class ProductService {
       }
 
       // 4. Safely remove variants that were deleted from form (if not referenced by sales items)
-      for (const [size, oldRow] of existingMap.entries()) {
-        if (!incomingSizes.has(size)) {
+      for (const oldRow of existingVariantsData || []) {
+        if (!matchedOldIds.has(oldRow.id)) {
           try {
             await this.supabase
               .from('product_variants')
@@ -605,11 +698,18 @@ export class ProductService {
 
       existing.variants = sortVariants(
         validated.variants.map((v) => {
-          const oldVar = existing.variants.find((ov) => ov.size === v.size);
+          let oldVar = v.id ? existing.variants.find((ov) => ov.id === v.id) : undefined;
+          if (!oldVar) {
+            oldVar = existing.variants.find(
+              (ov) =>
+                ov.size.toLowerCase().trim() === v.size.toLowerCase().trim() ||
+                normalizeSizeKey(ov.size).toLowerCase() === normalizeSizeKey(v.size).toLowerCase()
+            );
+          }
           const cost = Number(v.cost_price);
           const price = Number(v.selling_price);
           return {
-            id: oldVar ? oldVar.id : `var-${existing.id}-${v.size}`,
+            id: oldVar ? oldVar.id : `var-${existing.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             product_id: existing.id,
             size: v.size as ProductSizeKey,
             cost_price: cost,

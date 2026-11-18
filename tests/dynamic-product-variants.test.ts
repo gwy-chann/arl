@@ -206,6 +206,76 @@ describe('Feature ARL-38: In-Form Category Creation & Dynamic Product Variant Ma
       assert.ok(v350);
       assert.equal(v350.stock_quantity, 96, '350ml stock quantity remained preserved');
     });
+    test('adds a variant only via createProduct when product name matches an existing product', async () => {
+      const service = new ProductService();
+      // User creates a product with existing name "Toyo" and specifies a single new variant
+      const result = await service.createProduct({
+        name: 'Toyo',
+        category_id: null,
+        variants: [
+          {
+            size: '1 Container',
+            cost_price: 250,
+            selling_price: 300,
+            min_stock_level: 5,
+            opening_stock: 20,
+          },
+        ],
+      });
+
+      assert.equal(result.name, 'Toyo');
+      assert.equal(result.variants.length, 4, 'Merges new variant into Toyo giving 4 total variants');
+      const containerVar = result.variants.find((v) => v.size === '1 Container');
+      assert.ok(containerVar);
+      assert.equal(containerVar.selling_price, 300);
+      assert.equal(containerVar.stock_quantity, 20, 'Opening stock 20 is saved');
+
+      // Verify existing variants are untouched
+      const v350 = result.variants.find((v) => v.size === '350');
+      assert.ok(v350);
+      assert.equal(v350.stock_quantity, 96);
+    });
+
+    test('updates existing variant size label by id without duplicating or resetting stock', async () => {
+      const service = new ProductService();
+      const products = await service.getProducts();
+      const toyo = products.find((p) => p.name.toLowerCase() === 'toyo');
+      assert.ok(toyo);
+      const var1L = toyo.variants.find((v) => v.size === '1L');
+      assert.ok(var1L);
+
+      // Rename 1L to "1 Liter" by passing id
+      const updated = await service.updateProduct({
+        id: toyo.id,
+        name: toyo.name,
+        category_id: toyo.category_id,
+        variants: [
+          ...toyo.variants
+            .filter((v) => v.id !== var1L.id)
+            .map((v) => ({
+              id: v.id,
+              size: v.size,
+              cost_price: v.cost_price,
+              selling_price: v.selling_price,
+              min_stock_level: v.min_stock_level,
+            })),
+          {
+            id: var1L.id,
+            size: '1 Liter',
+            cost_price: var1L.cost_price,
+            selling_price: 52,
+            min_stock_level: var1L.min_stock_level,
+          },
+        ],
+      });
+
+      assert.equal(updated.variants.length, 3, 'Variant count remains 3');
+      const renamed = updated.variants.find((v) => v.id === var1L.id);
+      assert.ok(renamed);
+      assert.equal(renamed.size, '1 Liter');
+      assert.equal(renamed.selling_price, 52);
+      assert.equal(renamed.stock_quantity, 58, 'Preserves existing on-hand stock');
+    });
   });
 
   describe('Inline Category Creation Integration', () => {
