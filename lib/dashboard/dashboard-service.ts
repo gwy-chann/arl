@@ -25,13 +25,13 @@ function isSameCalendarDay(d1: Date, d2: Date): boolean {
   );
 }
 
-const SIZE_LABELS: Record<ProductSizeKey, string> = {
+const SIZE_LABELS: Record<string, string> = {
   '350': '350 ml',
   '1L': '1 L',
-  'gal': '1 gal',
+  gal: '1 gal',
 };
 
-const STANDARD_SIZES: ProductSizeKey[] = ['350', '1L', 'gal'];
+const STANDARD_SIZES: ('350' | '1L' | 'gal')[] = ['350', '1L', 'gal'];
 
 export class DashboardService {
   private readonly supabase?: SupabaseClient | null;

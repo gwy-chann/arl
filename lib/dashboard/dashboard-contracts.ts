@@ -24,7 +24,7 @@ export interface SalesChartDayDTO {
 
 export interface StockMatrixCellDTO {
   variant_id: string;
-  size_key: '350' | '1L' | 'gal';
+  size_key: '350' | '1L' | 'gal' | string;
   size_label: string;
   stock_quantity: number;
   min_stock_level: number;

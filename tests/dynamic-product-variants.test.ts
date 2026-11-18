@@ -2,8 +2,6 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   getSizeLabel,
-  formatPeso,
-  computeUnitProfit,
   variantInputSchema,
   productInputSchema,
 } from '../specs/027-dynamic-product-variants-in-form-categories/contracts/product-contracts.ts';
