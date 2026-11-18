@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/overdue-sms-sweep",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
