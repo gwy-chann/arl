@@ -3,7 +3,6 @@ import {
   PHILSMS_DEFAULT_SENDER_ID,
   philsmsBalanceResponseSchema,
   type PhilSmsAccountStatus,
-  type PhilSmsHealthLevel,
   type GetPhilSmsBalanceOptions,
 } from './philsms-contracts.ts';
 
