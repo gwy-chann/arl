@@ -387,4 +387,86 @@ describe('Feature ARL-19: Customer Utang Tracker & Overdue Reminder Queue', () =
       }
     });
   });
+
+  describe('Feature ARL-37: Customer Profile Persistence & Real-Time Balances Cache Invalidation', () => {
+    it('updates customer contact details immediately across the utang summary without stale data', async () => {
+      const { updateCustomer, getCustomerUtangSummary } = await import(
+        '../lib/customers/customer-service.ts'
+      );
+
+      // Initially, k1 debtor row has phone '0917 301 4488'
+      const initialSummary = await getCustomerUtangSummary(null, fixedAsOf);
+      const k1Initial = initialSummary.rows.find((r) => r.customer_id === 'k1');
+      assert.ok(k1Initial);
+      assert.strictEqual(k1Initial.phone, '0917 301 4488');
+
+      // Update phone number to '0917 999 8888'
+      await updateCustomer('k1', {
+        name: "Aling Nena's Sari-Sari Store",
+        phone: '0917 999 8888',
+        address: 'Purok 3, Brgy. San Roque',
+      });
+
+      // Fetch summary again: immediately reflects updated contact number
+      const updatedSummary = await getCustomerUtangSummary(null, fixedAsOf);
+      const k1Updated = updatedSummary.rows.find((r) => r.customer_id === 'k1');
+      assert.ok(k1Updated);
+      assert.strictEqual(k1Updated.phone, '0917 999 8888');
+    });
+
+    it('removes customer from utang tracker when balance is settled, while keeping them in directory', async () => {
+      const {
+        getCustomerUtangSummary,
+        getCustomerDirectory,
+        updateCustomerSalePayment,
+      } = await import('../lib/customers/customer-service.ts');
+
+      // Check k1 before settlement: owes 1340 on sale s2
+      const initialSummary = await getCustomerUtangSummary(null, fixedAsOf);
+      assert.ok(initialSummary.rows.some((r) => r.customer_id === 'k1'));
+
+      // Settle sale s2 completely via updateCustomerSalePayment
+      updateCustomerSalePayment('s2', 1340, 'Paid');
+
+      // Verify k1 is now removed from utang summary
+      const afterPaymentSummary = await getCustomerUtangSummary(null, fixedAsOf);
+      assert.strictEqual(
+        afterPaymentSummary.rows.some((r) => r.customer_id === 'k1'),
+        false,
+        'Settled customer must be excluded from utang balances list'
+      );
+
+      // Verify k1 remains fully present in customer directory with 0 balance
+      const directory = await getCustomerDirectory(null);
+      const k1InDir = directory.find((c) => c.id === 'k1');
+      assert.ok(k1InDir, 'Customer k1 must remain in customer directory');
+      assert.strictEqual(k1InDir.debt_balance, 0, 'Debt balance must be 0 in directory');
+    });
+
+    it('new customer with 0 balance appears in directory but is omitted from utang tracker', async () => {
+      const { createCustomer, getCustomerDirectory, getCustomerUtangSummary } = await import(
+        '../lib/customers/customer-service.ts'
+      );
+
+      const newCust = await createCustomer({
+        name: 'Aling Roselle',
+        phone: '0918 000 1111',
+        address: 'Market Site',
+      });
+
+      // Excluded from utang tracker
+      const utang = await getCustomerUtangSummary(null, fixedAsOf);
+      assert.strictEqual(
+        utang.rows.some((r) => r.customer_id === newCust.id),
+        false,
+        'Customer with ₱0 balance must not appear on utang tracker'
+      );
+
+      // Included in directory
+      const directory = await getCustomerDirectory(null);
+      const found = directory.find((c) => c.id === newCust.id);
+      assert.ok(found, 'Must appear in customer directory');
+      assert.strictEqual(found.name, 'Aling Roselle');
+    });
+  });
 });

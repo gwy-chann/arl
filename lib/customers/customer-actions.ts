@@ -71,6 +71,9 @@ export async function createCustomerAction(
 
     revalidatePath('/customers');
     revalidatePath(`/customers/${customer.id}`);
+    revalidatePath('/customers/balances');
+    revalidatePath('/reports/balances');
+    revalidatePath('/dashboard');
 
     return {
       success: true,
@@ -104,6 +107,9 @@ export async function updateCustomerAction(
 
     revalidatePath('/customers');
     revalidatePath(`/customers/${customer.id}`);
+    revalidatePath('/customers/balances');
+    revalidatePath('/reports/balances');
+    revalidatePath('/dashboard');
 
     return {
       success: true,

@@ -141,4 +141,97 @@ describe('Feature ARL-10: Customer Profile View with Purchase Ledger & Debt Brea
       assert.strictEqual(noteText, 'Fully paid. Nothing is owed.');
     });
   });
+
+  describe('Scenario 5: Customer Profile Persistence & Contact Updates (ARL-37)', () => {
+    it('persists phone and name updates to customer profile across subsequent queries', async () => {
+      // Import updateCustomer and getCustomerById dynamically or via service
+      const { updateCustomer, getCustomerById } = await import(
+        '../lib/customers/customer-service.ts'
+      );
+
+      // Verify initial state of k1
+      const initial = await getCustomerById('k1');
+      assert.ok(initial);
+      assert.strictEqual(initial.phone, '0917 301 4488');
+
+      // Update phone number
+      const updated = await updateCustomer('k1', {
+        name: "Aling Nena's Sari-Sari Store",
+        phone: '0917 999 8888',
+        address: 'Purok 3, Brgy. San Roque',
+      });
+
+      assert.strictEqual(updated.phone, '0917 999 8888');
+
+      // Subsequent fetch confirms persistence
+      const refetched = await getCustomerById('k1');
+      assert.ok(refetched);
+      assert.strictEqual(refetched.phone, '0917 999 8888');
+      assert.strictEqual(refetched.debt_balance, initial.debt_balance, 'Debt balance must be retained');
+    });
+
+    it('creates new customer record with 0 balance and persists permanently', async () => {
+      const { createCustomer, getCustomerById } = await import(
+        '../lib/customers/customer-service.ts'
+      );
+
+      const created = await createCustomer({
+        name: 'Aling Roselle General Merchandise',
+        phone: '0918 555 1234',
+        address: 'San Jose, Antipolo City',
+      });
+
+      assert.ok(created.id, 'Should generate an ID');
+      assert.strictEqual(created.name, 'Aling Roselle General Merchandise');
+      assert.strictEqual(created.debt_balance, 0);
+      assert.strictEqual(created.purchase_count, 0);
+
+      const fetched = await getCustomerById(created.id);
+      assert.ok(fetched);
+      assert.strictEqual(fetched.name, 'Aling Roselle General Merchandise');
+      assert.strictEqual(fetched.phone, '0918 555 1234');
+      assert.strictEqual(fetched.debt_balance, 0);
+    });
+
+    it('supports mock Supabase client without throwing 42501 permission error', async () => {
+      const { updateCustomer } = await import('../lib/customers/customer-service.ts');
+
+      const mockSupabase = {
+        from: (table: string) => {
+          assert.strictEqual(table, 'customers');
+          return {
+            update: (values: Record<string, unknown>) => ({
+              eq: (col: string, val: string) => ({
+                select: () => ({
+                  single: async () => ({
+                    data: {
+                      id: val,
+                      name: values.name,
+                      phone: values.phone,
+                      address: values.address,
+                      created_at: '2026-10-01T08:00:00Z',
+                      updated_at: new Date().toISOString(),
+                    },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        },
+      } as unknown as Parameters<typeof updateCustomer>[2];
+
+      const res = await updateCustomer(
+        'k1',
+        {
+          name: "Aling Nena's Sari-Sari Store",
+          phone: '0917 888 7777',
+          address: 'Purok 3',
+        },
+        mockSupabase
+      );
+
+      assert.strictEqual(res.phone, '0917 888 7777');
+    });
+  });
 });
