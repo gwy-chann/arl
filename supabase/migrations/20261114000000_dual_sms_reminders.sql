@@ -6,8 +6,9 @@ ALTER TABLE public.system_settings
     ADD COLUMN IF NOT EXISTS notify_customer_sms BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS customer_sms_template TEXT NULL;
 
--- 2. Extend sales with last_sms_sent_at for rate limiting and dispatch audit
+-- 2. Extend sales with balance and last_sms_sent_at for rate limiting and dispatch audit
 ALTER TABLE public.sales
+    ADD COLUMN IF NOT EXISTS balance NUMERIC(10,2) GENERATED ALWAYS AS (total_amount - amount_paid) STORED,
     ADD COLUMN IF NOT EXISTS last_sms_sent_at TIMESTAMPTZ NULL;
 
 -- 3. Optional index on sales for overdue balance queries with last_sms_sent_at

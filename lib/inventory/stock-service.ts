@@ -301,10 +301,12 @@ export class StockService {
         if (!error && data) {
           rawMovements = data as SupabaseMovementRow[];
         } else {
-          rawMovements = [...inMemoryMovements];
+          console.warn('Supabase movements fetch error:', error);
+          rawMovements = [];
         }
-      } catch {
-        rawMovements = [...inMemoryMovements];
+      } catch (err) {
+        console.warn('Supabase movements exception:', err);
+        rawMovements = [];
       }
     } else {
       rawMovements = [...inMemoryMovements];

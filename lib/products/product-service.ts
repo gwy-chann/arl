@@ -270,7 +270,8 @@ export class ProductService {
         .order('name', { ascending: true });
 
       if (error || !data) {
-        return [...inMemoryProducts];
+        console.warn('Supabase products fetch error:', error);
+        return [];
       }
 
       return (data as unknown as SupabaseProductRow[]).map((p) => {
@@ -285,8 +286,9 @@ export class ProductService {
           updated_at: p.updated_at,
         };
       });
-    } catch {
-      return [...inMemoryProducts];
+    } catch (err) {
+      console.warn('Supabase products fetch exception:', err);
+      return [];
     }
   }
 
@@ -324,7 +326,7 @@ export class ProductService {
         .single();
 
       if (error || !data) {
-        return inMemoryProducts.find((p) => p.id === id) ?? null;
+        return null;
       }
 
       const p = data as unknown as SupabaseProductRow;
@@ -340,7 +342,7 @@ export class ProductService {
         updated_at: p.updated_at,
       };
     } catch {
-      return inMemoryProducts.find((p) => p.id === id) ?? null;
+      return null;
     }
   }
 

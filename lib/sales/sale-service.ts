@@ -485,17 +485,8 @@ export class SaleService {
         .order('created_at', { ascending: false });
 
       if (error || !sales) {
-        return inMemorySales.map((s) => {
-          const daysUnpaid = getDaysUnpaid(s.created_at);
-          const overdue = isSaleOverdue(s.balance, s.created_at, reminderDays);
-          const overdueDays = getOverdueDays(s.created_at, reminderDays);
-          return {
-            ...s,
-            days_unpaid: daysUnpaid,
-            is_overdue: overdue,
-            days_overdue: overdueDays,
-          };
-        });
+        console.warn('Supabase sales fetch error:', error);
+        return [];
       }
 
       return (sales as unknown as SupabaseSaleJoinRow[]).map((s) => {
@@ -545,18 +536,9 @@ export class SaleService {
           days_overdue: overdueDays,
         };
       });
-    } catch {
-      return inMemorySales.map((s) => {
-        const daysUnpaid = getDaysUnpaid(s.created_at);
-        const overdue = isSaleOverdue(s.balance, s.created_at, reminderDays);
-        const overdueDays = getOverdueDays(s.created_at, reminderDays);
-        return {
-          ...s,
-          days_unpaid: daysUnpaid,
-          is_overdue: overdue,
-          days_overdue: overdueDays,
-        };
-      });
+    } catch (err) {
+      console.warn('Supabase getSales exception:', err);
+      return [];
     }
   }
 

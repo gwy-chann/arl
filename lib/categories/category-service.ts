@@ -115,8 +115,9 @@ export async function getCategories(
           product_count: Array.isArray(row.products) ? row.products.length : 0,
         }));
       }
+      return [];
     } catch {
-      // Graceful fallback to in-memory store
+      return [];
     }
   }
 

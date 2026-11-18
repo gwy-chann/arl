@@ -387,8 +387,11 @@ export async function getCustomerDirectory(
         .order('name', { ascending: true });
 
       if (custError) {
-        console.warn('Supabase customers fetch error, falling back to memory store:', custError);
-      } else if (customersData && customersData.length > 0) {
+        console.warn('Supabase customers fetch error:', custError);
+        return [];
+      }
+
+      if (customersData) {
         const { data: salesData } = await supabase
           .from('sales')
           .select('id, customer_id, total_amount, amount_paid, payment_status');
@@ -415,8 +418,10 @@ export async function getCustomerDirectory(
           updated_at: c.updated_at,
         }));
       }
+      return [];
     } catch (err) {
-      console.warn('Supabase query failed, using in-memory store:', err);
+      console.warn('Supabase query failed:', err);
+      return [];
     }
   }
 
@@ -475,8 +480,10 @@ export async function getCustomerById(
           sales,
         };
       }
+      return null;
     } catch (err) {
-      console.warn('Supabase fetch customer failed, using memory store:', err);
+      console.warn('Supabase fetch customer failed:', err);
+      return null;
     }
   }
 
@@ -513,36 +520,30 @@ export async function createCustomer(
   const validated = customerInputSchema.parse(input);
 
   if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('customers')
-        .insert({
-          name: validated.name,
-          phone: validated.phone,
-          address: validated.address || '',
-        })
-        .select('*')
-        .single();
+    const { data, error } = await supabase
+      .from('customers')
+      .insert({
+        name: validated.name,
+        phone: validated.phone,
+        address: validated.address || '',
+      })
+      .select('*')
+      .single();
 
-      if (error) {
-        console.warn('Supabase create customer error:', error.message || error);
-      } else if (data) {
-        const created: CustomerWithRollup = {
-          id: data.id,
-          name: data.name,
-          phone: data.phone,
-          address: data.address || '',
-          purchase_count: 0,
-          debt_balance: 0,
-          created_at: data.created_at,
-          updated_at: data.updated_at,
-        };
-        memoryCustomers.push(created);
-        return created;
-      }
-    } catch (err) {
-      console.warn('Supabase create customer failed, saving to memory store:', err);
+    if (error || !data) {
+      throw new Error(`Failed to create customer in Supabase: ${error?.message || 'Unknown error'}`);
     }
+
+    return {
+      id: data.id,
+      name: data.name,
+      phone: data.phone,
+      address: data.address || '',
+      purchase_count: 0,
+      debt_balance: 0,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
   }
 
   const newId = 'cust-' + Math.random().toString(36).slice(2, 9);
@@ -569,40 +570,33 @@ export async function updateCustomer(
   const validated = customerInputSchema.parse(input);
 
   if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('customers')
-        .update({
-          name: validated.name,
-          phone: validated.phone,
-          address: validated.address || '',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select('*')
-        .single();
+    const { data, error } = await supabase
+      .from('customers')
+      .update({
+        name: validated.name,
+        phone: validated.phone,
+        address: validated.address || '',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select('*')
+      .single();
 
-      if (error) {
-        console.warn('Supabase create customer error:', error.message || error);
-      } else if (data) {
-        const existing = memoryCustomers.find((c) => c.id === id);
-        const updated: CustomerWithRollup = {
-          id: data.id,
-          name: data.name,
-          phone: data.phone,
-          address: data.address || '',
-          purchase_count: existing?.purchase_count || 0,
-          debt_balance: existing?.debt_balance || 0,
-          created_at: data.created_at,
-          updated_at: data.updated_at,
-        };
-        const idx = memoryCustomers.findIndex((c) => c.id === id);
-        if (idx >= 0) memoryCustomers[idx] = updated;
-        return updated;
-      }
-    } catch (err) {
-      console.warn('Supabase update customer failed, updating memory store:', err);
+    if (error || !data) {
+      throw new Error(`Failed to update customer in Supabase: ${error?.message || 'Customer not found'}`);
     }
+
+    const existing = memoryCustomers.find((c) => c.id === id);
+    return {
+      id: data.id,
+      name: data.name,
+      phone: data.phone,
+      address: data.address || '',
+      purchase_count: existing?.purchase_count || 0,
+      debt_balance: existing?.debt_balance || 0,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
   }
 
   const idx = memoryCustomers.findIndex((c) => c.id === id);
@@ -740,23 +734,23 @@ export async function getCustomerUtangSummary(
   if (supabase) {
     try {
       const { data, error } = await supabase.from('sales').select('*');
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         sales = (data as Array<Record<string, unknown>>).map((s) => ({
           id: String(s.id),
           receipt_number: String(s.receipt_number),
           customer_id: String(s.customer_id),
           total_amount: Number(s.total_amount),
           amount_paid: Number(s.amount_paid),
-          balance: Number(s.balance),
+          balance: Number(s.balance ?? Math.max(0, Number(s.total_amount) - Number(s.amount_paid))),
           payment_status: s.payment_status as SaleSummary['payment_status'],
           order_status: s.order_status as SaleSummary['order_status'],
           created_at: String(s.created_at),
         }));
       } else {
-        sales = [...memorySales];
+        sales = [];
       }
     } catch {
-      sales = [...memorySales];
+      sales = [];
     }
   } else {
     sales = [...memorySales];
