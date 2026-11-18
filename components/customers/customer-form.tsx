@@ -99,7 +99,7 @@ export function CustomerForm({
       {generalError && (
         <div
           role="alert"
-          className="mb-5 p-3.5 bg-danger-light border border-danger-border text-danger rounded-[var(--r)] text-[14px]"
+          className="mb-5 p-3.5 bg-danger-light border border-danger-border text-danger rounded-(--r) text-[14px]"
         >
           {generalError}
         </div>
@@ -108,7 +108,7 @@ export function CustomerForm({
       {/* Form Card */}
       <form
         onSubmit={handleSubmit}
-        className="bg-bg-surface border border-border rounded-[var(--r)] shadow-xs overflow-hidden"
+        className="bg-bg-surface border border-border rounded-(--r) shadow-xs overflow-hidden"
       >
         <div className="p-5 sm:p-6 space-y-4">
           {/* Customer Name */}
@@ -128,7 +128,7 @@ export function CustomerForm({
               placeholder="e.g. Aling Nena's Sari-Sari Store"
               className={`w-full px-3.5 py-2 text-[14.5px] bg-bg-input text-text-primary border ${
                 fieldErrors.name ? 'border-danger' : 'border-border'
-              } rounded-[var(--r)] focus:outline-hidden focus:border-border-focus transition-colors`}
+              } rounded-(--r) focus:outline-hidden focus:border-border-focus transition-colors`}
             />
             {fieldErrors.name && (
               <p className="text-[12.5px] text-danger mt-1">
@@ -155,7 +155,7 @@ export function CustomerForm({
                 placeholder="09XX XXX XXXX"
                 className={`w-full px-3.5 py-2 text-[14.5px] bg-bg-input text-text-primary border ${
                   fieldErrors.phone ? 'border-danger' : 'border-border'
-                } rounded-[var(--r)] focus:outline-hidden focus:border-border-focus transition-colors`}
+                } rounded-(--r) focus:outline-hidden focus:border-border-focus transition-colors`}
               />
               {fieldErrors.phone && (
                 <p className="text-[12.5px] text-danger mt-1">
@@ -178,7 +178,7 @@ export function CustomerForm({
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="e.g. Purok 3, Brgy. San Roque"
-                className="w-full px-3.5 py-2 text-[14.5px] bg-bg-input text-text-primary border border-border rounded-[var(--r)] focus:outline-hidden focus:border-border-focus transition-colors"
+                className="w-full px-3.5 py-2 text-[14.5px] bg-bg-input text-text-primary border border-border rounded-(--r) focus:outline-hidden focus:border-border-focus transition-colors"
               />
             </div>
           </div>
@@ -188,14 +188,14 @@ export function CustomerForm({
         <div className="px-5 py-3.5 sm:px-6 bg-bg-muted border-t border-border flex items-center justify-end gap-3">
           <Link
             href={cancelHref}
-            className="px-4 py-2 text-[14px] font-medium text-text-primary bg-secondary hover:bg-secondary-hover border border-border rounded-[var(--r)] transition-colors shadow-2xs"
+            className="px-4 py-2 text-[14px] font-medium text-text-primary bg-secondary hover:bg-secondary-hover border border-border rounded-(--r) transition-colors shadow-2xs"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-4 py-2 text-[14px] font-medium text-text-light bg-primary hover:bg-primary-hover disabled:opacity-60 rounded-[var(--r)] transition-colors shadow-xs"
+            className="px-4 py-2 text-[14px] font-medium text-text-light bg-primary hover:bg-primary-hover disabled:opacity-60 rounded-(--r) transition-colors shadow-xs"
           >
             {isSubmitting ? 'Saving...' : isEdit ? 'Save changes' : 'Save customer'}
           </button>
