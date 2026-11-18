@@ -15,12 +15,10 @@ import {
   _getInMemorySmsAuditLogs,
 } from '../../lib/services/sms-audit-service.ts';
 import {
-  getSystemSettings,
   updateReminderSettings,
   _resetSettingsStore,
 } from '../../lib/settings/settings-service.ts';
 import {
-  SaleService,
   resetInMemorySales,
   _setInMemorySales,
   _getInMemorySales,
