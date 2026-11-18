@@ -57,13 +57,12 @@ export function CustomerForm({
         return;
       }
 
-      showToast('Customer saved');
+      showToast(mode === 'edit' ? 'Customer updated' : 'Customer saved');
       const targetId = result.customerId || initialCustomer?.id;
-      if (targetId) {
-        router.push(`/customers/${targetId}`);
-      } else {
-        router.push('/customers');
-      }
+      setIsSubmitting(false);
+      const targetUrl = targetId ? `/customers/${targetId}` : '/customers';
+      router.push(targetUrl);
+      router.refresh();
     } catch (err) {
       setGeneralError(err instanceof Error ? err.message : 'An unexpected error occurred');
       setIsSubmitting(false);
@@ -198,7 +197,7 @@ export function CustomerForm({
             disabled={isSubmitting}
             className="px-4 py-2 text-[14px] font-medium text-text-light bg-primary hover:bg-primary-hover disabled:opacity-60 rounded-[var(--r)] transition-colors shadow-xs"
           >
-            {isSubmitting ? 'Saving...' : 'Save customer'}
+            {isSubmitting ? 'Saving...' : isEdit ? 'Save changes' : 'Save customer'}
           </button>
         </div>
       </form>
