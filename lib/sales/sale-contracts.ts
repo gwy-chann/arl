@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-export const PackagingSizeEnum = z.enum(['350', '1L', 'gal']);
-export type PackagingSize = z.infer<typeof PackagingSizeEnum>;
+export const PackagingSizeEnum = z.string();
+export type PackagingSize = string;
 
 export const PaymentStatusEnum = z.enum(['Paid', 'Partially Paid', 'Not Yet Paid']);
 export type PaymentStatus = z.infer<typeof PaymentStatusEnum>;

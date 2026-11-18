@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   PRODUCT_SIZES,
   productInputSchema,
-  type ProductSizeKey,
+  getSizeLabel,
   type ProductWithVariants,
 } from '@/specs/006-multi-variant-product-catalog/contracts/product-contracts';
 import { useToast } from '@/components/ui/toast-provider';
@@ -14,6 +14,7 @@ import {
   createProductAction,
   updateProductAction,
 } from '@/lib/products/product-actions';
+import { createCategoryAction } from '@/lib/categories/category-actions';
 
 interface CategoryOption {
   id: string;
@@ -26,7 +27,8 @@ interface ProductFormProps {
 }
 
 interface VariantRowState {
-  size: ProductSizeKey;
+  id?: string;
+  size: string;
   cost_price: string;
   selling_price: string;
   min_stock_level: string;
@@ -42,34 +44,125 @@ export function ProductForm({
   const isEdit = Boolean(initialProduct);
 
   const [name, setName] = useState(initialProduct?.name || '');
+  const [categoriesList, setCategoriesList] = useState<CategoryOption[]>(categories);
   const [categoryId, setCategoryId] = useState<string>(
     initialProduct?.category_id || (categories[0]?.id ?? '')
   );
 
+  // Initialize variants: existing variants for edit mode, or standard presets for new mode
   const [variants, setVariants] = useState<VariantRowState[]>(() => {
-    return PRODUCT_SIZES.map((sz) => {
-      const existing = initialProduct?.variants.find((v) => v.size === sz.key);
-      return {
-        size: sz.key,
-        cost_price: existing ? String(existing.cost_price) : '',
-        selling_price: existing ? String(existing.selling_price) : '',
-        min_stock_level: existing ? String(existing.min_stock_level) : '',
-        opening_stock: '0',
-      };
-    });
+    if (initialProduct?.variants && initialProduct.variants.length > 0) {
+      return initialProduct.variants.map((v) => ({
+        id: v.id,
+        size: getSizeLabel(v.size),
+        cost_price: String(v.cost_price),
+        selling_price: String(v.selling_price),
+        min_stock_level: String(v.min_stock_level),
+        opening_stock: String(v.stock_quantity),
+      }));
+    }
+    return PRODUCT_SIZES.map((sz) => ({
+      size: sz.label,
+      cost_price: '',
+      selling_price: '',
+      min_stock_level: '',
+      opening_stock: '0',
+    }));
   });
 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Inline Category Modal state
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [categoryModalError, setCategoryModalError] = useState<string | null>(null);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isCategoryModalOpen) {
+        setIsCategoryModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCategoryModalOpen]);
+
   const updateVariantField = (
-    sizeKey: ProductSizeKey,
+    index: number,
     field: keyof VariantRowState,
     value: string
   ) => {
     setVariants((prev) =>
-      prev.map((v) => (v.size === sizeKey ? { ...v, [field]: value } : v))
+      prev.map((v, i) => (i === index ? { ...v, [field]: value } : v))
     );
+  };
+
+  const handleAddVariant = () => {
+    setVariants((prev) => [
+      ...prev,
+      {
+        size: '',
+        cost_price: '',
+        selling_price: '',
+        min_stock_level: '',
+        opening_stock: '0',
+      },
+    ]);
+  };
+
+  const handleRemoveVariant = (index: number) => {
+    if (variants.length <= 1) return;
+    setVariants((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleOpenCategoryModal = () => {
+    setNewCategoryName('');
+    setCategoryModalError(null);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleCreateCategory = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) {
+      setCategoryModalError('Category name is required');
+      return;
+    }
+
+    setCategoryModalError(null);
+    setIsCreatingCategory(true);
+
+    try {
+      const res = await createCategoryAction(trimmed);
+      if (!res.success || !res.category) {
+        setCategoryModalError(res.error || 'Failed to create category');
+        setIsCreatingCategory(false);
+        return;
+      }
+
+      // Append new category to state and pre-select it
+      const newCat: CategoryOption = {
+        id: res.category.id,
+        name: res.category.name,
+      };
+
+      setCategoriesList((prev) => {
+        const exists = prev.some((c) => c.id === newCat.id);
+        return exists ? prev : [...prev, newCat];
+      });
+      setCategoryId(newCat.id);
+      setIsCategoryModalOpen(false);
+      showToast('Category added');
+    } catch (err: unknown) {
+      setCategoryModalError(
+        err instanceof Error ? err.message : 'Failed to create category'
+      );
+    } finally {
+      setIsCreatingCategory(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -78,9 +171,24 @@ export function ProductForm({
     setIsSubmitting(true);
 
     try {
+      if (variants.length === 0) {
+        setError('At least one size variant is required');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check empty sizes
+      const emptySizeIndex = variants.findIndex((v) => !v.size.trim());
+      if (emptySizeIndex !== -1) {
+        setError('All variants must have a valid packaging size label');
+        setIsSubmitting(false);
+        return;
+      }
+
       // Prepare payload and validate via Zod schema
       const payloadVariants = variants.map((v) => ({
-        size: v.size,
+        id: v.id,
+        size: v.size.trim(),
         cost_price: parseFloat(v.cost_price || '0'),
         selling_price: parseFloat(v.selling_price || '0'),
         min_stock_level: parseInt(v.min_stock_level || '0', 10),
@@ -165,8 +273,8 @@ export function ProductForm({
         </h1>
         <p className="text-[14.5px] text-text-muted mt-1 m-0">
           {isEdit
-            ? 'Update prices and minimum stock for each size.'
-            : 'Set the product and the price of each size.'}
+            ? 'Update prices, minimum stock, and packaging variants.'
+            : 'Set the product, category, and pricing for each size variant.'}
         </p>
       </div>
 
@@ -177,7 +285,8 @@ export function ProductForm({
           <button
             type="button"
             onClick={() => setError(null)}
-            className="text-danger hover:text-danger/80 text-[16px] leading-none ml-2"
+            className="text-danger hover:text-danger/80 text-[16px] leading-none ml-2 cursor-pointer"
+            aria-label="Dismiss error"
           >
             ✕
           </button>
@@ -210,12 +319,21 @@ export function ProductForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="pc"
-              className="text-[13.5px] font-semibold text-text-primary"
-            >
-              Category
-            </label>
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="pc"
+                className="text-[13.5px] font-semibold text-text-primary"
+              >
+                Category
+              </label>
+              <button
+                type="button"
+                onClick={handleOpenCategoryModal}
+                className="text-[12.5px] font-medium text-primary hover:text-primary-hover transition-colors cursor-pointer"
+              >
+                + Add new category
+              </button>
+            </div>
             <select
               id="pc"
               value={categoryId}
@@ -223,7 +341,7 @@ export function ProductForm({
               className="w-full bg-bg-base border border-border rounded-[var(--r)] px-3 py-2 text-[14.5px] text-text-primary focus:outline-none focus:border-border-focus transition-colors"
             >
               <option value="">Uncategorized</option>
-              {categories.map((c) => (
+              {categoriesList.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -234,19 +352,38 @@ export function ProductForm({
 
         {/* Size Variants Pricing Section */}
         <div className="p-5">
-          <h2 className="text-[15px] font-bold text-text-primary m-0">
-            Size variants
-          </h2>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-[15px] font-bold text-text-primary m-0">
+              Size variants
+            </h2>
+            <button
+              type="button"
+              onClick={handleAddVariant}
+              className="px-3 py-1.5 text-[13px] font-medium text-primary bg-primary/10 hover:bg-primary/20 border border-primary-border/40 rounded-[var(--r)] transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              + Add size variant
+            </button>
+          </div>
           <p className="text-[13.5px] text-text-muted mt-0.5 mb-4">
-            Cost and selling price are used to work out profit on every sale.
+            Cost and selling price are used to calculate profit margins on every sale.
           </p>
+
+          {/* Datalist for standard packaging suggestions */}
+          <datalist id="size-preset-suggestions">
+            <option value="350 ml" />
+            <option value="1 L" />
+            <option value="1 gal" />
+            <option value="500 ml" />
+            <option value="20 L Drum" />
+            <option value="Sachet 100ml" />
+          </datalist>
 
           <div className="overflow-x-auto border border-border rounded-[var(--r)]">
             <table className="w-full text-left border-collapse" id="var-table">
               <thead>
                 <tr className="border-b border-border bg-bg-base/60 text-[12.5px] uppercase tracking-wider font-semibold text-text-muted">
-                  <th scope="col" className="px-3.5 py-2.5">
-                    Size
+                  <th scope="col" className="px-3.5 py-2.5 min-w-[150px]">
+                    Packaging size
                   </th>
                   <th scope="col" className="px-3.5 py-2.5">
                     Cost price (₱)
@@ -262,80 +399,103 @@ export function ProductForm({
                       Opening stock
                     </th>
                   )}
+                  <th scope="col" className="px-3.5 py-2.5 text-right w-[60px]">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {PRODUCT_SIZES.map((sz, idx) => {
-                  const v = variants[idx];
-                  return (
-                    <tr key={sz.key} className="hover:bg-bg-hover/30 transition-colors">
-                      <td className="px-3.5 py-3 font-semibold text-text-primary text-[14px]">
-                        {sz.label}
-                      </td>
-                      <td className="px-3.5 py-2.5">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          id={`cost-${sz.key}`}
-                          value={v.cost_price}
-                          onChange={(e) =>
-                            updateVariantField(sz.key, 'cost_price', e.target.value)
-                          }
-                          required
-                          aria-label={`${sz.label} cost price`}
-                          className="w-full max-w-[120px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
-                        />
-                      </td>
-                      <td className="px-3.5 py-2.5">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          id={`price-${sz.key}`}
-                          value={v.selling_price}
-                          onChange={(e) =>
-                            updateVariantField(sz.key, 'selling_price', e.target.value)
-                          }
-                          required
-                          aria-label={`${sz.label} selling price`}
-                          className="w-full max-w-[120px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
-                        />
-                      </td>
+                {variants.map((v, idx) => (
+                  <tr
+                    key={v.id || `variant-row-${idx}`}
+                    className="hover:bg-bg-hover/30 transition-colors"
+                  >
+                    <td className="px-3.5 py-2.5">
+                      <input
+                        type="text"
+                        list="size-preset-suggestions"
+                        value={v.size}
+                        onChange={(e) =>
+                          updateVariantField(idx, 'size', e.target.value)
+                        }
+                        placeholder="e.g. 1 L or 500 ml"
+                        required
+                        aria-label={`Variant ${idx + 1} packaging size`}
+                        className="w-full bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                      />
+                    </td>
+                    <td className="px-3.5 py-2.5">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={v.cost_price}
+                        onChange={(e) =>
+                          updateVariantField(idx, 'cost_price', e.target.value)
+                        }
+                        required
+                        aria-label={`${v.size || 'Variant'} cost price`}
+                        className="w-full max-w-[120px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                      />
+                    </td>
+                    <td className="px-3.5 py-2.5">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={v.selling_price}
+                        onChange={(e) =>
+                          updateVariantField(idx, 'selling_price', e.target.value)
+                        }
+                        required
+                        aria-label={`${v.size || 'Variant'} selling price`}
+                        className="w-full max-w-[120px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                      />
+                    </td>
+                    <td className="px-3.5 py-2.5">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={v.min_stock_level}
+                        onChange={(e) =>
+                          updateVariantField(idx, 'min_stock_level', e.target.value)
+                        }
+                        required
+                        aria-label={`${v.size || 'Variant'} minimum stock`}
+                        className="w-full max-w-[100px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                      />
+                    </td>
+                    {!isEdit && (
                       <td className="px-3.5 py-2.5">
                         <input
                           type="number"
                           min="0"
                           step="1"
-                          id={`min-${sz.key}`}
-                          value={v.min_stock_level}
+                          value={v.opening_stock}
                           onChange={(e) =>
-                            updateVariantField(sz.key, 'min_stock_level', e.target.value)
+                            updateVariantField(idx, 'opening_stock', e.target.value)
                           }
-                          required
-                          aria-label={`${sz.label} minimum stock`}
+                          aria-label={`${v.size || 'Variant'} opening stock`}
                           className="w-full max-w-[100px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                         />
                       </td>
-                      {!isEdit && (
-                        <td className="px-3.5 py-2.5">
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            id={`open-${sz.key}`}
-                            value={v.opening_stock}
-                            onChange={(e) =>
-                              updateVariantField(sz.key, 'opening_stock', e.target.value)
-                            }
-                            aria-label={`${sz.label} opening stock`}
-                            className="w-full max-w-[100px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
-                          />
-                        </td>
+                    )}
+                    <td className="px-3.5 py-2.5 text-right">
+                      {variants.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveVariant(idx)}
+                          className="text-text-muted hover:text-danger text-[16px] transition-colors p-1 leading-none cursor-pointer"
+                          aria-label={`Remove ${v.size || 'variant'}`}
+                          title="Remove variant"
+                        >
+                          ✕
+                        </button>
                       )}
-                    </tr>
-                  );
-                })}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -358,6 +518,83 @@ export function ProductForm({
           </button>
         </div>
       </form>
+
+      {/* Accessible Inline Category Creation Modal */}
+      {isCategoryModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="inline-cat-title"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div className="bg-bg-surface border border-border rounded-[var(--r)] shadow-lg max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between mb-4">
+              <h2
+                id="inline-cat-title"
+                className="text-[18px] font-bold text-text-primary m-0"
+              >
+                Add new category
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsCategoryModalOpen(false)}
+                className="text-text-muted hover:text-text-primary text-[18px] leading-none cursor-pointer"
+                aria-label="Close dialog"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-[14px] text-text-muted mt-0 mb-4">
+              Create a new category for products without leaving this form.
+            </p>
+
+            {categoryModalError && (
+              <div className="mb-4 p-3 rounded-[var(--r)] bg-danger/10 border border-danger-border/30 text-danger text-[13.5px]">
+                {categoryModalError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateCategory}>
+              <div className="flex flex-col gap-1.5 mb-5">
+                <label
+                  htmlFor="new-category-name"
+                  className="text-[13.5px] font-semibold text-text-primary"
+                >
+                  Category name
+                </label>
+                <input
+                  id="new-category-name"
+                  type="text"
+                  autoFocus
+                  required
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="e.g. Cooking Oil"
+                  className="w-full bg-bg-base border border-border rounded-[var(--r)] px-3 py-2 text-[14.5px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus transition-colors"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryModalOpen(false)}
+                  className="px-4 py-2 rounded-[var(--r)] bg-secondary hover:bg-secondary-hover text-text-primary border border-border text-[14px] font-medium transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingCategory}
+                  className="px-4 py-2 rounded-[var(--r)] bg-primary hover:bg-primary-hover disabled:opacity-50 text-text-light text-[14px] font-medium shadow-xs transition-colors cursor-pointer"
+                >
+                  {isCreatingCategory ? 'Saving...' : 'Save category'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
