@@ -120,9 +120,11 @@ export interface GetPhilSmsBalanceOptions {
 }
 
 export const philsmsBalanceDataSchema = z.object({
-  balance: z.union([z.string(), z.number()]),
+  balance: z.union([z.string(), z.number()]).optional(),
+  remaining_balance: z.union([z.string(), z.number()]).optional(),
   currency: z.string().default('PHP'),
   sender_id: z.string().optional(),
+  expired_on: z.string().optional(),
 });
 
 export const philsmsBalanceResponseSchema = z.object({

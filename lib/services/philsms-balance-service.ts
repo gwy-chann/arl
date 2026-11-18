@@ -109,7 +109,11 @@ export async function getPhilSmsBalance(
   }
 
   // 3. Live gateway request
-  const baseUrl = (process.env.PHILSMS_BASE_URL || PHILSMS_DEFAULT_BASE_URL).replace(/\/+$/, '');
+  const baseUrl = (
+    process.env.PHILSMS_API_BASE_URL ||
+    process.env.PHILSMS_BASE_URL ||
+    PHILSMS_DEFAULT_BASE_URL
+  ).replace(/\/+$/, '');
   const url = `${baseUrl}/balance`;
 
   const controller = new AbortController();
@@ -167,8 +171,28 @@ export async function getPhilSmsBalance(
       };
     }
 
-    // 3c. Parse and normalize successful response
+    // 3c. Parse and normalize response
     const rawData = await response.json();
+
+    // Check for API-level errors (PhilSMS often returns HTTP 200 with { status: 'error', message: ... })
+    if (rawData && typeof rawData === 'object' && (rawData as Record<string, unknown>).status === 'error') {
+      balanceCache = null;
+      const errMsg = String((rawData as Record<string, unknown>).message || 'PhilSMS returned an error response');
+      return {
+        success: false,
+        balance: 0,
+        currency: 'PHP',
+        senderId: configuredSenderId,
+        isMock: false,
+        cached: false,
+        warningLevel: 'error',
+        statusText: errMsg.toLowerCase().includes('unauthenticated')
+          ? 'Gateway Authentication Failed'
+          : errMsg,
+        errorMessage: errMsg,
+      };
+    }
+
     const parsed = philsmsBalanceResponseSchema.safeParse(rawData);
 
     let rawBalance = 0;
@@ -176,14 +200,18 @@ export async function getPhilSmsBalance(
     let currency = 'PHP';
 
     if (parsed.success && parsed.data.data) {
-      const { balance, currency: cur, sender_id: sid } = parsed.data.data;
-      rawBalance = typeof balance === 'number' ? balance : parseFloat(String(balance)) || 0;
+      const { balance, remaining_balance, currency: cur, sender_id: sid } = parsed.data.data;
+      const rawVal = balance !== undefined ? balance : remaining_balance;
+      const cleanVal = typeof rawVal === 'string' ? rawVal.replace(/[^\d.]/g, '') : rawVal;
+      rawBalance = typeof cleanVal === 'number' ? cleanVal : parseFloat(String(cleanVal)) || 0;
       if (cur) currency = cur;
       if (sid) senderId = sid;
     } else if (rawData && typeof rawData === 'object' && 'data' in rawData) {
       const dataObj = (rawData as Record<string, unknown>).data as Record<string, unknown>;
-      if (dataObj && 'balance' in dataObj) {
-        rawBalance = parseFloat(String(dataObj.balance)) || 0;
+      const rawVal = dataObj?.balance !== undefined ? dataObj?.balance : dataObj?.remaining_balance;
+      if (rawVal !== undefined) {
+        const cleanVal = typeof rawVal === 'string' ? String(rawVal).replace(/[^\d.]/g, '') : rawVal;
+        rawBalance = typeof cleanVal === 'number' ? cleanVal : parseFloat(String(cleanVal)) || 0;
       }
       if (dataObj && 'sender_id' in dataObj && typeof dataObj.sender_id === 'string') {
         senderId = dataObj.sender_id;
