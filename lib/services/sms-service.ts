@@ -13,6 +13,7 @@ import {
   type ManualSmsNudgeInput,
   type OverdueSweepSummary,
 } from './sms-contracts.ts';
+import { dispatchSmsSafe } from './sms-resilience.ts';
 
 /**
  * Validates and normalizes raw phone strings to standard Philippine mobile formats.
@@ -91,20 +92,33 @@ export async function dispatchSms(payload: SmsDispatchPayload): Promise<SmsDispa
   }
 
   try {
-    // Record into audit log
-    dispatchedSmsHistory.push({
+    const safeResult = await dispatchSmsSafe({
       ...payload,
-      recipientMobile: norm.display || payload.recipientMobile,
+      recipientMobile: norm.clean || payload.recipientMobile,
     });
 
-    const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    if (safeResult.success) {
+      // Record into audit log
+      dispatchedSmsHistory.push({
+        ...payload,
+        recipientMobile: norm.display || payload.recipientMobile,
+      });
+
+      return {
+        success: true,
+        messageId: safeResult.messageId || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        recipientMobile: norm.display || payload.recipientMobile,
+        recipientType: payload.recipientType,
+        timestamp: nowIso,
+      };
+    }
 
     return {
-      success: true,
-      messageId,
+      success: false,
       recipientMobile: norm.display || payload.recipientMobile,
       recipientType: payload.recipientType,
       timestamp: nowIso,
+      error: safeResult.error || 'SMS Gateway transmission failure',
     };
   } catch (err) {
     return {
