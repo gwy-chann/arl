@@ -99,6 +99,38 @@ export interface PhilSmsAccountBalance {
   status: string;
 }
 
+export type PhilSmsHealthLevel = 'healthy' | 'warning' | 'critical' | 'mock' | 'error';
+
+export interface PhilSmsAccountStatus {
+  success: boolean;
+  balance: number;
+  currency: string;
+  senderId: string;
+  isMock: boolean;
+  cached: boolean;
+  cachedAt?: string;
+  expiresAt?: string;
+  warningLevel: PhilSmsHealthLevel;
+  statusText: string;
+  errorMessage?: string;
+}
+
+export interface GetPhilSmsBalanceOptions {
+  forceRefresh?: boolean;
+}
+
+export const philsmsBalanceDataSchema = z.object({
+  balance: z.union([z.string(), z.number()]),
+  currency: z.string().default('PHP'),
+  sender_id: z.string().optional(),
+});
+
+export const philsmsBalanceResponseSchema = z.object({
+  status: z.enum(['success', 'error']),
+  message: z.string().optional(),
+  data: philsmsBalanceDataSchema.optional(),
+});
+
 /**
  * Telecom Encoding Constants
  */
