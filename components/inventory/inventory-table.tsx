@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import Link from 'next/link';
 import type { InventoryVariant } from '@/lib/inventory/types';
 import { computeCapacityMeter } from '@/lib/inventory/capacity-meter';
 import { useInventoryRealtime } from '@/lib/hooks/use-inventory-realtime';
@@ -75,33 +74,30 @@ export function InventoryTable({ initialVariants }: Readonly<InventoryTableProps
           <table id="itbl" className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border bg-bg-base/50 text-[12.5px] uppercase tracking-wider font-semibold text-text-muted">
-                <th scope="col" className="px-4 py-3" style={{ width: '22%' }}>
+                <th scope="col" className="px-4 py-3" style={{ width: '25%' }}>
                   Product
                 </th>
-                <th scope="col" className="px-4 py-3" style={{ width: '14%' }}>
+                <th scope="col" className="px-4 py-3" style={{ width: '15%' }}>
                   Size
                 </th>
-                <th scope="col" className="px-4 py-3 text-right" style={{ width: '12%' }}>
+                <th scope="col" className="px-4 py-3 text-right" style={{ width: '15%' }}>
                   In stock
                 </th>
-                <th scope="col" className="px-4 py-3 text-right" style={{ width: '12%' }}>
+                <th scope="col" className="px-4 py-3 text-right" style={{ width: '15%' }}>
                   Minimum
                 </th>
                 <th scope="col" className="px-4 py-3" style={{ width: '20%' }}>
                   Level
                 </th>
-                <th scope="col" className="px-4 py-3" style={{ width: '14%' }}>
+                <th scope="col" className="px-4 py-3" style={{ width: '15%' }}>
                   Status
-                </th>
-                <th scope="col" className="px-4 py-3 text-right" style={{ width: '180px' }}>
-                  <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
               {filteredVariants.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-text-muted text-[14.5px]">
+                  <td colSpan={6} className="px-4 py-10 text-center text-text-muted text-[14.5px]">
                     No variants match &quot;{searchQuery}&quot;
                   </td>
                 </tr>
@@ -142,22 +138,6 @@ export function InventoryTable({ initialVariants }: Readonly<InventoryTableProps
                           label={evalResult.statusLabel}
                           variant={evalResult.statusVariant}
                         />
-                      </td>
-                      <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5">
-                          <Link
-                            href={`/inventory/in?v=${v.id}`}
-                            className="btn sec sm inline-flex items-center justify-center px-2.5 py-1 text-xs font-semibold rounded-[var(--r)] bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
-                          >
-                            Stock in
-                          </Link>
-                          <Link
-                            href={`/inventory/out?v=${v.id}`}
-                            className="btn sec sm inline-flex items-center justify-center px-2.5 py-1 text-xs font-semibold rounded-[var(--r)] bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
-                          >
-                            Stock out
-                          </Link>
-                        </div>
                       </td>
                     </tr>
                   );

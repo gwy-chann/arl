@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import Link from 'next/link';
 import { InventoryTabs } from './inventory-tabs';
 import type { VariantStockOption } from '@/lib/inventory/stock-service';
 
@@ -85,13 +84,12 @@ export function InventoryOverviewTable({
                 <th className="py-2.5 px-4 font-semibold text-right">Minimum</th>
                 <th className="py-2.5 px-4 font-semibold w-1/5">Level</th>
                 <th className="py-2.5 px-4 font-semibold">Status</th>
-                <th className="py-2.5 px-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filteredVariants.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-text-muted text-[14.5px]">
+                  <td colSpan={6} className="py-12 text-center text-text-muted text-[14.5px]">
                     No variants found matching criteria.
                   </td>
                 </tr>
@@ -156,22 +154,6 @@ export function InventoryOverviewTable({
                         >
                           {statusText}
                         </span>
-                      </td>
-                      <td data-label="Actions" className="py-3 px-4 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-2">
-                          <Link
-                            href={`/inventory/in?v=${v.id}`}
-                            className="px-2.5 py-1 text-xs font-medium rounded-[var(--r)] bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
-                          >
-                            Stock in
-                          </Link>
-                          <Link
-                            href={`/inventory/out?v=${v.id}`}
-                            className="px-2.5 py-1 text-xs font-medium rounded-[var(--r)] bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
-                          >
-                            Stock out
-                          </Link>
-                        </div>
                       </td>
                     </tr>
                   );
