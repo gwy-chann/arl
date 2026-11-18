@@ -320,6 +320,14 @@ export function resetInMemorySales(): void {
   inMemorySales = JSON.parse(JSON.stringify(INITIAL_SALES_STORE));
 }
 
+export function _setInMemorySales(sales: SaleTransactionDTO[]): void {
+  inMemorySales = JSON.parse(JSON.stringify(sales));
+}
+
+export function _getInMemorySales(): SaleTransactionDTO[] {
+  return JSON.parse(JSON.stringify(inMemorySales));
+}
+
 /**
  * Generates the next sequential receipt number in ARLQ-XXXXX format.
  */
