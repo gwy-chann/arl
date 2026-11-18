@@ -11,17 +11,32 @@ import {
 import { useConfirm } from '@/components/ui/confirm-provider';
 import { useToast } from '@/components/ui/toast-provider';
 import { deleteProductAction } from '@/lib/products/product-actions';
+import { useProductsRealtime } from '@/lib/hooks/use-products-realtime';
+import { notifyProductsUpdated } from '@/lib/products/product-events';
 
 interface ProductTableProps {
   initialProducts: ProductWithVariants[];
 }
 
 export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
-  const [products, setProducts] = useState<ProductWithVariants[]>(initialProducts);
+  const { products, setProducts } = useProductsRealtime(initialProducts);
   const [searchQuery, setSearchQuery] = useState('');
   const confirm = useConfirm();
   const { showToast } = useToast();
   const [, startTransition] = useTransition();
+
+  const totalVariantsCount = useMemo(() => {
+    return products.reduce((acc, p) => acc + (p.variants?.length || 0), 0);
+  }, [products]);
+
+  const subtitle = useMemo(() => {
+    if (products.length === 3 && totalVariantsCount === 9) {
+      return 'Three products, three sizes each: nine sellable items.';
+    }
+    const productWord = products.length === 1 ? 'product' : 'products';
+    const itemWord = totalVariantsCount === 1 ? 'sellable item' : 'sellable items';
+    return `${products.length} ${productWord}, ${totalVariantsCount} ${itemWord}.`;
+  }, [products.length, totalVariantsCount]);
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -59,6 +74,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
     startTransition(() => {
       setProducts((prev) => prev.filter((p) => p.id !== product.id));
     });
+    notifyProductsUpdated();
     showToast('Product deleted');
   };
 
@@ -71,7 +87,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
             Products
           </h1>
           <p className="text-[14.5px] text-text-muted mt-1 m-0">
-            Three products, three sizes each: nine sellable items.
+            {subtitle}
           </p>
         </div>
         <div>

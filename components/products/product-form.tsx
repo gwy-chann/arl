@@ -15,6 +15,7 @@ import {
   updateProductAction,
 } from '@/lib/products/product-actions';
 import { createCategoryAction } from '@/lib/categories/category-actions';
+import { notifyProductsUpdated } from '@/lib/products/product-events';
 
 interface CategoryOption {
   id: string;
@@ -259,6 +260,7 @@ export function ProductForm({
         showToast(res.product?.name ? `Saved ${res.product.name}` : 'Product added');
       }
 
+      notifyProductsUpdated();
       router.push('/products');
       router.refresh();
     } catch (err: unknown) {
