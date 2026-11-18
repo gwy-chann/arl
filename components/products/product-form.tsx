@@ -171,22 +171,38 @@ export function ProductForm({
     setIsSubmitting(true);
 
     try {
-      if (variants.length === 0) {
+      // In Add mode, filter out completely unconfigured/empty starter rows
+      const submittedRows = variants.filter((v) => {
+        if (isEdit && Boolean(v.id)) return true;
+        const hasCost = Boolean(v.cost_price && v.cost_price.trim());
+        const hasPrice = Boolean(v.selling_price && v.selling_price.trim());
+        const hasSize = Boolean(
+          v.size &&
+            v.size.trim() &&
+            !v.size.trim().toLowerCase().startsWith('e.g.')
+        );
+        return hasSize || hasCost || hasPrice;
+      });
+
+      if (submittedRows.length === 0) {
         setError('At least one size variant is required');
         setIsSubmitting(false);
         return;
       }
 
-      // Check empty sizes
-      const emptySizeIndex = variants.findIndex((v) => !v.size.trim());
+      // Check empty sizes among submitted rows
+      const emptySizeIndex = submittedRows.findIndex(
+        (v) =>
+          !v.size.trim() || v.size.trim().toLowerCase().startsWith('e.g.')
+      );
       if (emptySizeIndex !== -1) {
-        setError('All variants must have a valid packaging size label');
+        setError('All configured variants must have a valid packaging size label');
         setIsSubmitting(false);
         return;
       }
 
       // Prepare payload and validate via Zod schema
-      const payloadVariants = variants.map((v) => ({
+      const payloadVariants = submittedRows.map((v) => ({
         id: v.id,
         size: v.size.trim(),
         cost_price: parseFloat(v.cost_price || '0'),
@@ -240,10 +256,11 @@ export function ProductForm({
           return;
         }
 
-        showToast('Product added');
+        showToast(res.product?.name ? `Saved ${res.product.name}` : 'Product added');
       }
 
       router.push('/products');
+      router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setIsSubmitting(false);
@@ -394,11 +411,9 @@ export function ProductForm({
                   <th scope="col" className="px-3.5 py-2.5">
                     Minimum stock
                   </th>
-                  {!isEdit && (
-                    <th scope="col" className="px-3.5 py-2.5">
-                      Opening stock
-                    </th>
-                  )}
+                  <th scope="col" className="px-3.5 py-2.5">
+                    Opening stock
+                  </th>
                   <th scope="col" className="px-3.5 py-2.5 text-right w-[60px]">
                     <span className="sr-only">Actions</span>
                   </th>
@@ -419,7 +434,6 @@ export function ProductForm({
                           updateVariantField(idx, 'size', e.target.value)
                         }
                         placeholder="e.g. 1 L or 500 ml"
-                        required
                         aria-label={`Variant ${idx + 1} packaging size`}
                         className="w-full bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                       />
@@ -433,7 +447,7 @@ export function ProductForm({
                         onChange={(e) =>
                           updateVariantField(idx, 'cost_price', e.target.value)
                         }
-                        required
+                        placeholder="0.00"
                         aria-label={`${v.size || 'Variant'} cost price`}
                         className="w-full max-w-[120px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                       />
@@ -447,7 +461,7 @@ export function ProductForm({
                         onChange={(e) =>
                           updateVariantField(idx, 'selling_price', e.target.value)
                         }
-                        required
+                        placeholder="0.00"
                         aria-label={`${v.size || 'Variant'} selling price`}
                         className="w-full max-w-[120px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                       />
@@ -461,13 +475,22 @@ export function ProductForm({
                         onChange={(e) =>
                           updateVariantField(idx, 'min_stock_level', e.target.value)
                         }
-                        required
+                        placeholder="0"
                         aria-label={`${v.size || 'Variant'} minimum stock`}
                         className="w-full max-w-[100px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                       />
                     </td>
-                    {!isEdit && (
-                      <td className="px-3.5 py-2.5">
+                    <td className="px-3.5 py-2.5">
+                      {isEdit && Boolean(v.id) ? (
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="text-[13.5px] font-mono text-text-muted px-2.5 py-1.5 bg-bg-base/70 rounded-[var(--r)] border border-border/50 block min-w-[70px] text-center select-none"
+                            title="Current stock quantity (managed via sales & movements)"
+                          >
+                            {v.opening_stock || '0'}
+                          </span>
+                        </div>
+                      ) : (
                         <input
                           type="number"
                           min="0"
@@ -476,11 +499,12 @@ export function ProductForm({
                           onChange={(e) =>
                             updateVariantField(idx, 'opening_stock', e.target.value)
                           }
+                          placeholder="0"
                           aria-label={`${v.size || 'Variant'} opening stock`}
                           className="w-full max-w-[100px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                         />
-                      </td>
-                    )}
+                      )}
+                    </td>
                     <td className="px-3.5 py-2.5 text-right">
                       {variants.length > 1 && (
                         <button
