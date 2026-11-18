@@ -103,8 +103,23 @@ export function CustomerUtangTracker({
             Customers with balances (utang)
           </h1>
           <p className="text-[14.5px] text-text-muted mt-1 m-0">
-            Unpaid and partially paid sales.
+            Unpaid and partially paid sales. Only customers with active balances (&gt; ₱0.00) are listed here.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/customers"
+            className="btn sec sm"
+            title="View all registered customers including settled accounts"
+          >
+            All Customers Directory
+          </Link>
+          <Link
+            href="/customers/new"
+            className="btn pri sm"
+          >
+            + Add Customer
+          </Link>
         </div>
       </div>
 
@@ -145,7 +160,7 @@ export function CustomerUtangTracker({
       {/* Debt Table Card */}
       <div className="card">
         {/* Search Toolbar */}
-        <div className="p-3.5 sm:p-4 border-b border-border bg-bg-surface flex items-center justify-between gap-4">
+        <div className="p-3.5 sm:p-4 border-b border-border bg-bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="relative max-w-sm w-full">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
               <svg
@@ -171,8 +186,17 @@ export function CustomerUtangTracker({
               className="w-full pl-9 pr-4 py-2 text-sm bg-bg-input text-text-primary placeholder:text-text-muted border border-border rounded-md focus:outline-none focus:border-border-focus transition-colors"
             />
           </div>
-          <div className="text-xs text-text-muted whitespace-nowrap hidden sm:block">
-            {filteredRows.length} {filteredRows.length === 1 ? 'debtor' : 'debtors'}
+          <div className="flex items-center gap-3 text-xs text-text-muted">
+            <span>
+              Looking for settled accounts?{' '}
+              <Link href="/customers" className="text-primary hover:underline font-medium">
+                Customer Directory
+              </Link>
+            </span>
+            <span className="hidden sm:inline" aria-hidden="true">·</span>
+            <span className="whitespace-nowrap font-medium text-text-secondary">
+              {filteredRows.length} {filteredRows.length === 1 ? 'debtor' : 'debtors'}
+            </span>
           </div>
         </div>
 
@@ -311,13 +335,21 @@ export function CustomerUtangTracker({
           {filteredRows.length === 0 && (
             <div className="empty p-10 text-center">
               <b className="text-text-primary text-base font-semibold block mb-1">
-                No balances
+                {searchQuery ? 'No matching debtors' : 'No active customer balances'}
               </b>
-              <p className="text-text-muted text-sm m-0">
+              <p className="text-text-muted text-sm m-0 mb-4 max-w-md mx-auto">
                 {searchQuery
-                  ? 'No customers match your search.'
-                  : 'All customer accounts are fully paid.'}
+                  ? 'No indebted customers match your search query.'
+                  : 'All customer accounts are fully settled (₱0.00 debt).'}
               </p>
+              <div className="flex items-center justify-center gap-3">
+                <Link href="/customers" className="btn sec sm">
+                  View Full Customer Directory
+                </Link>
+                <Link href="/sales/new" className="btn pri sm">
+                  Create New Sale
+                </Link>
+              </div>
             </div>
           )}
         </div>
