@@ -144,8 +144,8 @@ describe('Feature ARL-10: Customer Profile View with Purchase Ledger & Debt Brea
 
   describe('Scenario 5: Customer Profile Persistence & Contact Updates (ARL-37)', () => {
     it('persists phone and name updates to customer profile across subsequent queries', async () => {
-      // Import updateCustomer and createCustomer dynamically or via service
-      const { updateCustomer, createCustomer, getCustomerById } = await import(
+      // Import updateCustomer and getCustomerById dynamically or via service
+      const { updateCustomer, getCustomerById } = await import(
         '../lib/customers/customer-service.ts'
       );
 
@@ -196,11 +196,11 @@ describe('Feature ARL-10: Customer Profile View with Purchase Ledger & Debt Brea
     it('supports mock Supabase client without throwing 42501 permission error', async () => {
       const { updateCustomer } = await import('../lib/customers/customer-service.ts');
 
-      const mockSupabase: any = {
+      const mockSupabase = {
         from: (table: string) => {
           assert.strictEqual(table, 'customers');
           return {
-            update: (values: any) => ({
+            update: (values: Record<string, unknown>) => ({
               eq: (col: string, val: string) => ({
                 select: () => ({
                   single: async () => ({
@@ -219,7 +219,7 @@ describe('Feature ARL-10: Customer Profile View with Purchase Ledger & Debt Brea
             }),
           };
         },
-      };
+      } as unknown as Parameters<typeof updateCustomer>[2];
 
       const res = await updateCustomer(
         'k1',
