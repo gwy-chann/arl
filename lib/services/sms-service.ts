@@ -14,6 +14,20 @@ import {
   type OverdueSweepSummary,
 } from './sms-contracts.ts';
 import { dispatchSmsSafe } from './sms-resilience.ts';
+import {
+  recordSmsDispatchLog,
+  _resetSmsAuditLogs,
+  getSmsLogsBySaleId,
+  getSmsLogsByCustomerId,
+  getAllSmsLogs,
+} from './sms-audit-service.ts';
+
+export {
+  getSmsLogsBySaleId,
+  getSmsLogsByCustomerId,
+  getAllSmsLogs,
+  recordSmsDispatchLog,
+};
 
 /**
  * Validates and normalizes raw phone strings to standard Philippine mobile formats.
@@ -60,10 +74,11 @@ export function validateAndNormalizePhilippineMobile(rawPhone?: string | null): 
 let dispatchedSmsHistory: SmsDispatchPayload[] = [];
 
 /**
- * Resets the in-memory SMS audit history (used in test setup/teardown).
+ * Resets the in-memory SMS audit history and audit ledger store (used in test setup/teardown).
  */
 export function _resetSmsHistory(): void {
   dispatchedSmsHistory = [];
+  _resetSmsAuditLogs();
 }
 
 /**
@@ -75,19 +90,45 @@ export function _getDispatchedSmsHistory(): SmsDispatchPayload[] {
 
 /**
  * Core SMS Dispatcher sending message to SMS gateway provider.
- * Uses a resilient mock logger in test and local environments.
+ * Uses a resilient mock logger in test and local environments,
+ * and asynchronously records every dispatch outcome into the immutable audit ledger.
  */
-export async function dispatchSms(payload: SmsDispatchPayload): Promise<SmsDispatchResult> {
+export async function dispatchSms(
+  payload: SmsDispatchPayload,
+  supabaseClient?: SupabaseClient | null
+): Promise<SmsDispatchResult> {
   const norm = validateAndNormalizePhilippineMobile(payload.recipientMobile);
   const nowIso = new Date().toISOString();
 
   if (!norm.isValid) {
+    const errorMsg = norm.error || 'Invalid mobile number';
+
+    // Record skipped / invalid dispatch into audit ledger asynchronously
+    recordSmsDispatchLog(
+      {
+        saleId: payload.saleId,
+        customerId: payload.customerId,
+        recipientMobile: payload.recipientMobile,
+        recipientType: payload.recipientType,
+        messageBody: payload.message,
+        gatewayName: 'PHILSMS',
+        gatewayMessageId: null,
+        status: 'SKIPPED',
+        errorReason: errorMsg,
+        latencyMs: 0,
+        dispatchedAt: nowIso,
+      },
+      supabaseClient
+    ).catch((err) => {
+      console.error('[dispatchSms] Audit log recording failed:', err);
+    });
+
     return {
       success: false,
       recipientMobile: payload.recipientMobile,
       recipientType: payload.recipientType,
       timestamp: nowIso,
-      error: norm.error || 'Invalid mobile number',
+      error: errorMsg,
     };
   }
 
@@ -98,35 +139,102 @@ export async function dispatchSms(payload: SmsDispatchPayload): Promise<SmsDispa
     });
 
     if (safeResult.success) {
-      // Record into audit log
+      // Record into legacy memory history
       dispatchedSmsHistory.push({
         ...payload,
         recipientMobile: norm.display || payload.recipientMobile,
       });
 
+      const messageId =
+        safeResult.messageId || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+      // Record successful dispatch into audit ledger asynchronously
+      recordSmsDispatchLog(
+        {
+          saleId: payload.saleId,
+          customerId: payload.customerId,
+          recipientMobile: norm.clean || payload.recipientMobile,
+          recipientType: payload.recipientType,
+          messageBody: payload.message,
+          gatewayName: 'PHILSMS',
+          gatewayMessageId: messageId,
+          status: 'SENT',
+          errorReason: null,
+          latencyMs: safeResult.durationMs,
+          dispatchedAt: nowIso,
+        },
+        supabaseClient
+      ).catch((err) => {
+        console.error('[dispatchSms] Audit log recording failed:', err);
+      });
+
       return {
         success: true,
-        messageId: safeResult.messageId || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        messageId,
         recipientMobile: norm.display || payload.recipientMobile,
         recipientType: payload.recipientType,
         timestamp: nowIso,
       };
     }
 
+    const errorMsg = safeResult.error || 'SMS Gateway transmission failure';
+
+    // Record failed dispatch into audit ledger asynchronously
+    recordSmsDispatchLog(
+      {
+        saleId: payload.saleId,
+        customerId: payload.customerId,
+        recipientMobile: norm.clean || payload.recipientMobile,
+        recipientType: payload.recipientType,
+        messageBody: payload.message,
+        gatewayName: 'PHILSMS',
+        gatewayMessageId: null,
+        status: 'FAILED',
+        errorReason: errorMsg,
+        latencyMs: safeResult.durationMs,
+        dispatchedAt: nowIso,
+      },
+      supabaseClient
+    ).catch((err) => {
+      console.error('[dispatchSms] Audit log recording failed:', err);
+    });
+
     return {
       success: false,
       recipientMobile: norm.display || payload.recipientMobile,
       recipientType: payload.recipientType,
       timestamp: nowIso,
-      error: safeResult.error || 'SMS Gateway transmission failure',
+      error: errorMsg,
     };
   } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'SMS Gateway transmission failure';
+
+    // Record exception failure into audit ledger asynchronously
+    recordSmsDispatchLog(
+      {
+        saleId: payload.saleId,
+        customerId: payload.customerId,
+        recipientMobile: payload.recipientMobile,
+        recipientType: payload.recipientType,
+        messageBody: payload.message,
+        gatewayName: 'PHILSMS',
+        gatewayMessageId: null,
+        status: 'FAILED',
+        errorReason: errorMsg,
+        latencyMs: 0,
+        dispatchedAt: nowIso,
+      },
+      supabaseClient
+    ).catch((e) => {
+      console.error('[dispatchSms] Audit log recording failed:', e);
+    });
+
     return {
       success: false,
       recipientMobile: payload.recipientMobile,
       recipientType: payload.recipientType,
       timestamp: nowIso,
-      error: err instanceof Error ? err.message : 'SMS Gateway transmission failure',
+      error: errorMsg,
     };
   }
 }
@@ -177,6 +285,25 @@ export async function sendManualCustomerSmsNudge(
 
   const phoneCheck = validateAndNormalizePhilippineMobile(targetCustomer.phone);
   if (!phoneCheck.isValid) {
+    // Record skipped manual nudge in audit ledger
+    recordSmsDispatchLog(
+      {
+        saleId: targetSale?.id,
+        customerId: targetCustomer.id,
+        recipientMobile: targetCustomer.phone || 'N/A',
+        recipientType: 'CUSTOMER',
+        messageBody: `[SKIPPED] Manual collection nudge for ${targetCustomer.name}`,
+        gatewayName: 'PHILSMS',
+        gatewayMessageId: null,
+        status: 'SKIPPED',
+        errorReason: 'Customer phone number missing or invalid',
+        latencyMs: 0,
+      },
+      supabaseClient
+    ).catch((err) => {
+      console.error('[sendManualCustomerSmsNudge] Audit log error:', err);
+    });
+
     return {
       success: false,
       error: `Cannot send SMS: ${targetCustomer.name} has no valid mobile number on record.`,
@@ -194,15 +321,18 @@ export async function sendManualCustomerSmsNudge(
     reminderDays,
   });
 
-  const sendResult = await dispatchSms({
-    recipientMobile: phoneCheck.clean || targetCustomer.phone,
-    recipientType: 'CUSTOMER',
-    message: messageText,
-    saleId: targetSale?.id,
-    receiptNumber: receiptNo,
-    customerId: targetCustomer.id,
-    customerName: targetCustomer.name,
-  });
+  const sendResult = await dispatchSms(
+    {
+      recipientMobile: phoneCheck.clean || targetCustomer.phone,
+      recipientType: 'CUSTOMER',
+      message: messageText,
+      saleId: targetSale?.id,
+      receiptNumber: receiptNo,
+      customerId: targetCustomer.id,
+      customerName: targetCustomer.name,
+    },
+    supabaseClient
+  );
 
   if (!sendResult.success) {
     return {
@@ -280,6 +410,25 @@ export async function dispatchOverdueBalanceReminders(options?: {
 
     // 3. Cooldown Invariant: Must not have sent automated SMS in past 24 hours
     if (!isEligibleForAutomatedReminder(sale.last_sms_sent_at, asOf)) {
+      // Record SKIPPED audit log due to 24h cooldown
+      recordSmsDispatchLog(
+        {
+          saleId: sale.id,
+          customerId: sale.customer_id,
+          recipientMobile: sale.customer_phone || settings.admin_mobile || '0917 555 0142',
+          recipientType: 'CUSTOMER',
+          messageBody: `[SKIPPED] Overdue balance reminder for receipt ${sale.receipt_number}`,
+          gatewayName: 'PHILSMS',
+          gatewayMessageId: null,
+          status: 'SKIPPED',
+          errorReason: 'Dispatched within last 24h cooldown',
+          latencyMs: 0,
+          dispatchedAt: asOf.toISOString(),
+        },
+        supabase
+      ).catch((err) => {
+        console.error('[dispatchOverdueBalanceReminders] Cooldown audit log error:', err);
+      });
       continue;
     }
 
@@ -295,15 +444,18 @@ export async function dispatchOverdueBalanceReminders(options?: {
       reminderDays,
     });
 
-    const adminResult = await dispatchSms({
-      recipientMobile: settings.admin_mobile,
-      recipientType: 'ADMIN',
-      message: adminMessage,
-      saleId: sale.id,
-      receiptNumber: sale.receipt_number,
-      customerId: sale.customer_id,
-      customerName,
-    });
+    const adminResult = await dispatchSms(
+      {
+        recipientMobile: settings.admin_mobile,
+        recipientType: 'ADMIN',
+        message: adminMessage,
+        saleId: sale.id,
+        receiptNumber: sale.receipt_number,
+        customerId: sale.customer_id,
+        customerName,
+      },
+      supabase
+    );
 
     summary.dispatches.push(adminResult);
     if (adminResult.success) {
@@ -322,15 +474,18 @@ export async function dispatchOverdueBalanceReminders(options?: {
           reminderDays,
         });
 
-        const customerResult = await dispatchSms({
-          recipientMobile: phoneNorm.clean || sale.customer_phone || '',
-          recipientType: 'CUSTOMER',
-          message: customerMessage,
-          saleId: sale.id,
-          receiptNumber: sale.receipt_number,
-          customerId: sale.customer_id,
-          customerName,
-        });
+        const customerResult = await dispatchSms(
+          {
+            recipientMobile: phoneNorm.clean || sale.customer_phone || '',
+            recipientType: 'CUSTOMER',
+            message: customerMessage,
+            saleId: sale.id,
+            receiptNumber: sale.receipt_number,
+            customerId: sale.customer_id,
+            customerName,
+          },
+          supabase
+        );
 
         summary.dispatches.push(customerResult);
         if (customerResult.success) {
@@ -345,6 +500,30 @@ export async function dispatchOverdueBalanceReminders(options?: {
           recipientType: 'CUSTOMER',
           timestamp: asOf.toISOString(),
           error: 'Customer SMS skipped: No valid mobile number',
+        });
+
+        recordSmsDispatchLog(
+          {
+            saleId: sale.id,
+            customerId: sale.customer_id,
+            recipientMobile: sale.customer_phone || 'N/A',
+            recipientType: 'CUSTOMER',
+            messageBody: formatCustomerReminderMessage({
+              customerName,
+              balanceFormatted,
+              receiptNumber: sale.receipt_number,
+              reminderDays,
+            }),
+            gatewayName: 'PHILSMS',
+            gatewayMessageId: null,
+            status: 'SKIPPED',
+            errorReason: 'Customer phone number missing',
+            latencyMs: 0,
+            dispatchedAt: asOf.toISOString(),
+          },
+          supabase
+        ).catch((err) => {
+          console.error('[dispatchOverdueBalanceReminders] Audit log error:', err);
         });
       }
     }
