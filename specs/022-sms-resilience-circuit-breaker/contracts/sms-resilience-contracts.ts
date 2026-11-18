@@ -1,5 +1,3 @@
-import type { SmsDispatchPayload } from '@/lib/services/sms-contracts';
-
 export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
 export type ResilienceErrorCode =
