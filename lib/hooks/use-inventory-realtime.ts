@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '../supabase/client';
+import { getInventoryVariantsAction } from '../inventory/inventory-actions';
 import type { InventoryVariant } from '../inventory/types';
 
 interface RealtimeVariantRow {
@@ -59,19 +60,70 @@ export function useInventoryRealtime(initialVariants: InventoryVariant[]) {
     );
   }, []);
 
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const refreshInventory = useCallback(async () => {
+    try {
+      const fresh = await getInventoryVariantsAction();
+      if (Array.isArray(fresh)) {
+        setVariants(fresh);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const scheduleRefresh = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      void refreshInventory();
+    }, 60);
+  }, [refreshInventory]);
+
   useEffect(() => {
+    let broadcastChannel: BroadcastChannel | null = null;
+    const handleLocalUpdate = () => {
+      scheduleRefresh();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('arl:products-updated', handleLocalUpdate);
+
+      if (typeof BroadcastChannel !== 'undefined') {
+        try {
+          broadcastChannel = new BroadcastChannel('arl-products-channel');
+          broadcastChannel.onmessage = (event) => {
+            if (event.data?.type === 'PRODUCTS_UPDATED') {
+              scheduleRefresh();
+            }
+          };
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     let supabase: ReturnType<typeof createClient> | null = null;
     try {
       supabase = createClient();
     } catch {
       // In offline or non-browser environments, skip realtime connection
-      return;
     }
 
-    if (!supabase) return;
+    if (!supabase) {
+      return () => {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('arl:products-updated', handleLocalUpdate);
+        }
+        broadcastChannel?.close();
+      };
+    }
 
     const channel = supabase
-      .channel('realtime:product_variants')
+      .channel('realtime:inventory_catalog')
       .on(
         'postgres_changes',
         {
@@ -85,12 +137,50 @@ export function useInventoryRealtime(initialVariants: InventoryVariant[]) {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'product_variants',
+        },
+        () => {
+          scheduleRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'product_variants',
+        },
+        () => {
+          scheduleRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products',
+        },
+        () => {
+          scheduleRefresh();
+        }
+      )
       .subscribe();
 
     return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('arl:products-updated', handleLocalUpdate);
+      }
+      broadcastChannel?.close();
       supabase?.removeChannel(channel);
     };
-  }, [handleVariantUpdate]);
+  }, [handleVariantUpdate, scheduleRefresh]);
 
   return {
     variants,
