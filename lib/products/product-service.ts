@@ -473,7 +473,7 @@ export class ProductService {
   }
 
   /**
-   * Updates an existing product and its 3 packaging variants.
+   * Updates an existing product and its packaging variants.
    */
   async updateProduct(input: UpdateProductInput): Promise<ProductWithVariants> {
     const validated = productInputSchema.parse({
@@ -505,7 +505,7 @@ export class ProductService {
             cost_price: cost,
             selling_price: price,
             unit_profit: computeUnitProfit(price, cost),
-            stock_quantity: oldVar ? oldVar.stock_quantity : 0,
+            stock_quantity: oldVar ? oldVar.stock_quantity : (v.opening_stock ?? 0),
             min_stock_level: v.min_stock_level ?? 0,
             created_at: oldVar ? oldVar.created_at : now,
             updated_at: now,
@@ -532,17 +532,55 @@ export class ProductService {
         throw new Error(prodError?.message || 'Failed to update product');
       }
 
-      // 2. Upsert/Update variants
+      // 2. Query existing variants for product
+      const { data: existingVariantsData } = await this.supabase
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', input.id);
+
+      const existingMap = new Map(
+        (existingVariantsData || []).map((row) => [row.size, row])
+      );
+      const incomingSizes = new Set(validated.variants.map((v) => v.size));
+
+      // 3. Upsert / Insert / Update variants
       for (const v of validated.variants) {
-        await this.supabase
-          .from('product_variants')
-          .update({
-            cost_price: v.cost_price,
-            selling_price: v.selling_price,
-            min_stock_level: v.min_stock_level,
-          })
-          .eq('product_id', input.id)
-          .eq('size', v.size);
+        if (existingMap.has(v.size)) {
+          await this.supabase
+            .from('product_variants')
+            .update({
+              cost_price: v.cost_price,
+              selling_price: v.selling_price,
+              min_stock_level: v.min_stock_level,
+            })
+            .eq('product_id', input.id)
+            .eq('size', v.size);
+        } else {
+          await this.supabase
+            .from('product_variants')
+            .insert({
+              product_id: input.id,
+              size: v.size,
+              cost_price: v.cost_price,
+              selling_price: v.selling_price,
+              stock_quantity: v.opening_stock ?? 0,
+              min_stock_level: v.min_stock_level,
+            });
+        }
+      }
+
+      // 4. Safely remove variants that were deleted from form (if not referenced by sales items)
+      for (const [size, oldRow] of existingMap.entries()) {
+        if (!incomingSizes.has(size)) {
+          try {
+            await this.supabase
+              .from('product_variants')
+              .delete()
+              .eq('id', oldRow.id);
+          } catch {
+            // Retain row if foreign key constraint (e.g. sale_items) prevents deletion
+          }
+        }
       }
 
       const updated = await this.getProductById(input.id);
@@ -577,7 +615,7 @@ export class ProductService {
             cost_price: cost,
             selling_price: price,
             unit_profit: computeUnitProfit(price, cost),
-            stock_quantity: oldVar ? oldVar.stock_quantity : 0,
+            stock_quantity: oldVar ? oldVar.stock_quantity : (v.opening_stock ?? 0),
             min_stock_level: v.min_stock_level ?? 0,
             created_at: oldVar ? oldVar.created_at : now,
             updated_at: now,

@@ -1,6 +1,6 @@
 /**
  * Component and API Contracts: Multi-Variant Product Catalog & Pricing Engine
- * Feature: ARL-8 (006-multi-variant-product-catalog)
+ * Feature: ARL-8 & ARL-38
  */
 
 import { z } from 'zod';
@@ -11,10 +11,12 @@ export const PRODUCT_SIZES = [
   { key: 'gal', label: '1 gal' },
 ] as const;
 
-export type ProductSizeKey = (typeof PRODUCT_SIZES)[number]['key'];
+export type ProductSizeKey = (typeof PRODUCT_SIZES)[number]['key'] | string;
 
 export function getSizeLabel(sizeKey: string): string {
-  const match = PRODUCT_SIZES.find((s) => s.key === sizeKey);
+  const match = PRODUCT_SIZES.find(
+    (s) => s.key === sizeKey || s.label.toLowerCase() === sizeKey.toLowerCase()
+  );
   return match ? match.label : sizeKey;
 }
 
@@ -34,7 +36,12 @@ export function computeUnitProfit(sellingPrice: number, costPrice: number): numb
 
 // Zod Schema for Variant Input
 export const variantInputSchema = z.object({
-  size: z.enum(['350', '1L', 'gal'] as const),
+  id: z.string().optional(),
+  size: z
+    .string()
+    .trim()
+    .min(1, 'Variant size label is required')
+    .max(50, 'Size label must not exceed 50 characters'),
   cost_price: z
     .number()
     .min(0, 'Cost price must be greater than or equal to 0'),
@@ -62,7 +69,17 @@ export const productInputSchema = z.object({
   category_id: z.string().nullable().optional(),
   variants: z
     .array(variantInputSchema)
-    .length(3, 'Each product must have exactly 3 size variants (350ml, 1L, 1gal)'),
+    .min(1, 'Each product must have at least one variant')
+    .refine(
+      (items) => {
+        const sizes = items.map((i) => i.size.trim().toLowerCase());
+        return new Set(sizes).size === sizes.length;
+      },
+      {
+        message: 'Variant sizes must be unique for each product',
+        path: ['variants'],
+      }
+    ),
 });
 
 export type VariantInput = z.infer<typeof variantInputSchema>;
