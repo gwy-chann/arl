@@ -363,7 +363,7 @@ export class StockService {
     }
 
     // Real-time search filter
-    if (options?.search && options.search.trim()) {
+    if (options?.search?.trim()) {
       const q = options.search.trim().toLowerCase();
       items = items.filter((m) => {
         return (
