@@ -5,6 +5,34 @@ export interface AssistantIconProps extends React.SVGProps<SVGSVGElement> {
 }
 
 /**
+ * Cat Icon - clear, friendly cat face with ears, eyes, whiskers, and nose
+ */
+export function CatIcon({ className = 'w-5 h-5', ...props }: Readonly<AssistantIconProps>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className}
+      {...props}
+    >
+      <path d="M12 5c.67 0 1.35.09 2 .26 1.78-2 5.03-2.84 6.42-2.26 1.4.58-.42 7-.42 7 .57 1.07 1 2.24 1 3.44C21 17.9 16.97 21 12 21s-9-3.1-9-7.56c0-1.25.5-2.4 1-3.44 0 0-1.89-6.42-.5-7 1.39-.58 4.72.26 6.5 2.26.65-.17 1.33-.26 2-.26z" />
+      <circle cx="8.5" cy="13.5" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="13.5" r="1.2" fill="currentColor" stroke="none" />
+      <path d="M11.25 15.5h1.5L12 16.3l-.75-.8z" fill="currentColor" stroke="none" />
+      <path d="M2.5 13.5h3" />
+      <path d="M2.5 15.8l3-.6" />
+      <path d="M21.5 13.5h-3" />
+      <path d="M21.5 15.8l-3-.6" />
+    </svg>
+  );
+}
+
+/**
  * Single-stroke Chat / Message Square icon
  */
 export function MessageSquareIcon({ className = 'w-4 h-4', ...props }: Readonly<AssistantIconProps>) {

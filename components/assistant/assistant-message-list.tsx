@@ -7,6 +7,7 @@ import {
   DEFAULT_WELCOME_MESSAGE,
   formatMessageTime,
 } from '@/lib/assistant/assistant-contracts';
+import { CatIcon } from './assistant-icons';
 
 export interface AssistantMessageListProps {
   messages: ChatMessage[];
@@ -38,8 +39,13 @@ export function AssistantMessageList({
     >
       {messages.length === 0 ? (
         <div className="space-y-3.5">
-          <div className="flex flex-col items-start gap-2 p-3.5 rounded-lg bg-bg-surface border border-border text-text-secondary text-xs leading-relaxed shadow-xs">
-            <p className="font-medium text-text-primary">Welcome to Store Assistant</p>
+          <div className="flex flex-col items-start gap-2.5 p-3.5 rounded-lg bg-bg-surface border border-border text-text-secondary text-xs leading-relaxed shadow-xs">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-light text-primary border border-primary-border/20 shrink-0">
+                <CatIcon className="w-3.5 h-3.5" />
+              </div>
+              <p className="font-medium text-text-primary">Welcome to Store Assistant</p>
+            </div>
             <p>{DEFAULT_WELCOME_MESSAGE}</p>
           </div>
 
@@ -84,20 +90,30 @@ export function AssistantMessageList({
               key={msg.id}
               className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
             >
-              <div
-                className={`max-w-[85%] px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed ${
-                  isUser
-                    ? 'bg-primary text-text-light rounded-xl rounded-tr-xs shadow-xs'
-                    : 'bg-bg-surface border border-border text-text-primary rounded-xl rounded-tl-xs shadow-xs'
-                }`}
-              >
-                <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+              <div className={`flex gap-2 max-w-[88%] ${isUser ? 'justify-end' : 'justify-start'}`}>
+                {!isUser && (
+                  <div
+                    className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-light text-primary border border-primary-border/20 shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  >
+                    <CatIcon className="w-3.5 h-3.5" />
+                  </div>
+                )}
+                <div
+                  className={`px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed ${
+                    isUser
+                      ? 'bg-primary text-text-light rounded-xl rounded-tr-xs shadow-xs'
+                      : 'bg-bg-surface border border-border text-text-primary rounded-xl rounded-tl-xs shadow-xs'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap wrap-break-word">{msg.content}</p>
+                </div>
               </div>
 
               {time && (
                 <span
                   className={`text-[10px] text-text-muted mt-1 px-1 select-none ${
-                    isUser ? 'text-right' : 'text-left'
+                    isUser ? 'text-right' : 'text-left pl-8'
                   }`}
                 >
                   {time}
