@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -10,6 +10,7 @@ import {
   type ProductWithVariants,
 } from '@/specs/006-multi-variant-product-catalog/contracts/product-contracts';
 import { useToast } from '@/components/ui/toast-provider';
+import { CategoryModal } from '@/components/categories/category-modal';
 import {
   createProductAction,
   updateProductAction,
@@ -73,23 +74,7 @@ export function ProductForm({
 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Inline Category Modal state
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [categoryModalError, setCategoryModalError] = useState<string | null>(null);
-  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
-
-  // Close modal on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isCategoryModalOpen) {
-        setIsCategoryModalOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCategoryModalOpen]);
 
   const updateVariantField = (
     index: number,
@@ -120,50 +105,27 @@ export function ProductForm({
   };
 
   const handleOpenCategoryModal = () => {
-    setNewCategoryName('');
-    setCategoryModalError(null);
     setIsCategoryModalOpen(true);
   };
 
-  const handleCreateCategory = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const trimmed = newCategoryName.trim();
-    if (!trimmed) {
-      setCategoryModalError('Category name is required');
-      return;
+  const handleSaveCategory = async (catName: string) => {
+    const res = await createCategoryAction(catName);
+    if (!res.success || !res.category) {
+      throw new Error(res.error || 'Failed to create category');
     }
 
-    setCategoryModalError(null);
-    setIsCreatingCategory(true);
+    // Append new category to state and pre-select it
+    const newCat: CategoryOption = {
+      id: res.category.id,
+      name: res.category.name,
+    };
 
-    try {
-      const res = await createCategoryAction(trimmed);
-      if (!res.success || !res.category) {
-        setCategoryModalError(res.error || 'Failed to create category');
-        setIsCreatingCategory(false);
-        return;
-      }
-
-      // Append new category to state and pre-select it
-      const newCat: CategoryOption = {
-        id: res.category.id,
-        name: res.category.name,
-      };
-
-      setCategoriesList((prev) => {
-        const exists = prev.some((c) => c.id === newCat.id);
-        return exists ? prev : [...prev, newCat];
-      });
-      setCategoryId(newCat.id);
-      setIsCategoryModalOpen(false);
-      showToast('Category added');
-    } catch (err: unknown) {
-      setCategoryModalError(
-        err instanceof Error ? err.message : 'Failed to create category'
-      );
-    } finally {
-      setIsCreatingCategory(false);
-    }
+    setCategoriesList((prev) => {
+      const exists = prev.some((c) => c.id === newCat.id);
+      return exists ? prev : [...prev, newCat];
+    });
+    setCategoryId(newCat.id);
+    showToast('Category added');
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -174,13 +136,11 @@ export function ProductForm({
     try {
       // In Add mode, filter out completely unconfigured/empty starter rows
       const submittedRows = variants.filter((v) => {
-        if (isEdit && Boolean(v.id)) return true;
-        const hasCost = Boolean(v.cost_price && v.cost_price.trim());
-        const hasPrice = Boolean(v.selling_price && v.selling_price.trim());
+        if (isEdit && v.id) return true;
+        const hasCost = Boolean(v.cost_price?.trim());
+        const hasPrice = Boolean(v.selling_price?.trim());
         const hasSize = Boolean(
-          v.size &&
-            v.size.trim() &&
-            !v.size.trim().toLowerCase().startsWith('e.g.')
+          v.size?.trim() && !v.size.trim().toLowerCase().startsWith('e.g.')
         );
         return hasSize || hasCost || hasPrice;
       });
@@ -206,10 +166,10 @@ export function ProductForm({
       const payloadVariants = submittedRows.map((v) => ({
         id: v.id,
         size: v.size.trim(),
-        cost_price: parseFloat(v.cost_price || '0'),
-        selling_price: parseFloat(v.selling_price || '0'),
-        min_stock_level: parseInt(v.min_stock_level || '0', 10),
-        opening_stock: parseInt(v.opening_stock || '0', 10),
+        cost_price: Number.parseFloat(v.cost_price || '0'),
+        selling_price: Number.parseFloat(v.selling_price || '0'),
+        min_stock_level: Number.parseInt(v.min_stock_level || '0', 10),
+        opening_stock: Number.parseInt(v.opening_stock || '0', 10),
       }));
 
       const validationResult = productInputSchema.safeParse({
@@ -219,11 +179,7 @@ export function ProductForm({
       });
 
       if (!validationResult.success) {
-        const issues =
-          validationResult.error.issues ||
-          (validationResult.error as unknown as { errors?: Array<{ message: string }> }).errors ||
-          [];
-        const firstIssue = issues[0]?.message || 'Please check form inputs';
+        const firstIssue = validationResult.error.issues[0]?.message || 'Please check form inputs';
         setError(firstIssue);
         setIsSubmitting(false);
         return;
@@ -299,7 +255,7 @@ export function ProductForm({
 
       {/* Error Banner */}
       {error && (
-        <div className="mb-5 p-3.5 rounded-[var(--r)] bg-danger/10 border border-danger-border/30 text-danger text-[14px] flex items-center justify-between">
+        <div className="mb-5 p-3.5 rounded-(--r) bg-danger/10 border border-danger-border/30 text-danger text-[14px] flex items-center justify-between">
           <span>{error}</span>
           <button
             type="button"
@@ -315,7 +271,7 @@ export function ProductForm({
       {/* Form Card */}
       <form
         onSubmit={handleSubmit}
-        className="bg-bg-surface border border-border rounded-[var(--r)] shadow-xs overflow-hidden"
+        className="bg-bg-surface border border-border rounded-(--r) shadow-xs overflow-hidden"
       >
         {/* Basic Details Section */}
         <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-border">
@@ -333,7 +289,7 @@ export function ProductForm({
               onChange={(e) => setName(e.target.value)}
               required
               placeholder="e.g. Toyo"
-              className="w-full bg-bg-base border border-border rounded-[var(--r)] px-3 py-2 text-[14.5px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus transition-colors"
+              className="w-full bg-bg-base border border-border rounded-(--r) px-3 py-2 text-[14.5px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus transition-colors"
             />
           </div>
 
@@ -357,7 +313,7 @@ export function ProductForm({
               id="pc"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full bg-bg-base border border-border rounded-[var(--r)] px-3 py-2 text-[14.5px] text-text-primary focus:outline-none focus:border-border-focus transition-colors"
+              className="w-full bg-bg-base border border-border rounded-(--r) px-3 py-2 text-[14.5px] text-text-primary focus:outline-none focus:border-border-focus transition-colors"
             >
               <option value="">Uncategorized</option>
               {categoriesList.map((c) => (
@@ -378,7 +334,7 @@ export function ProductForm({
             <button
               type="button"
               onClick={handleAddVariant}
-              className="px-3 py-1.5 text-[13px] font-medium text-primary bg-primary/10 hover:bg-primary/20 border border-primary-border/40 rounded-[var(--r)] transition-colors cursor-pointer flex items-center gap-1.5"
+              className="px-3 py-1.5 text-[13px] font-medium text-primary bg-primary/10 hover:bg-primary/20 border border-primary-border/40 rounded-(--r) transition-colors cursor-pointer flex items-center gap-1.5"
             >
               + Add size variant
             </button>
@@ -397,7 +353,7 @@ export function ProductForm({
             <option value="Sachet 100ml" />
           </datalist>
 
-          <div className="overflow-x-auto border border-border rounded-[var(--r)]">
+          <div className="overflow-x-auto border border-border rounded-(--r)">
             <table className="w-full text-left border-collapse" id="var-table">
               <thead>
                 <tr className="border-b border-border bg-bg-base/60 text-[12.5px] uppercase tracking-wider font-semibold text-text-muted">
@@ -437,7 +393,7 @@ export function ProductForm({
                         }
                         placeholder="e.g. 1 L or 500 ml"
                         aria-label={`Variant ${idx + 1} packaging size`}
-                        className="w-full bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                        className="w-full bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                       />
                     </td>
                     <td className="px-3.5 py-2.5">
@@ -451,7 +407,7 @@ export function ProductForm({
                         }
                         placeholder="0.00"
                         aria-label={`${v.size || 'Variant'} cost price`}
-                        className="w-full max-w-[120px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                        className="w-full max-w-[120px] bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                       />
                     </td>
                     <td className="px-3.5 py-2.5">
@@ -465,7 +421,7 @@ export function ProductForm({
                         }
                         placeholder="0.00"
                         aria-label={`${v.size || 'Variant'} selling price`}
-                        className="w-full max-w-[120px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                        className="w-full max-w-[120px] bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                       />
                     </td>
                     <td className="px-3.5 py-2.5">
@@ -479,14 +435,14 @@ export function ProductForm({
                         }
                         placeholder="0"
                         aria-label={`${v.size || 'Variant'} minimum stock`}
-                        className="w-full max-w-[100px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                        className="w-full max-w-[100px] bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                       />
                     </td>
                     <td className="px-3.5 py-2.5">
-                      {isEdit && Boolean(v.id) ? (
+                      {isEdit && v.id ? (
                         <div className="flex items-center gap-1.5">
                           <span
-                            className="text-[13.5px] font-mono text-text-muted px-2.5 py-1.5 bg-bg-base/70 rounded-[var(--r)] border border-border/50 block min-w-[70px] text-center select-none"
+                            className="text-[13.5px] font-mono text-text-muted px-2.5 py-1.5 bg-bg-base/70 rounded-(--r) border border-border/50 block min-w-[70px] text-center select-none"
                             title="Current stock quantity (managed via sales & movements)"
                           >
                             {v.opening_stock || '0'}
@@ -503,7 +459,7 @@ export function ProductForm({
                           }
                           placeholder="0"
                           aria-label={`${v.size || 'Variant'} opening stock`}
-                          className="w-full max-w-[100px] bg-bg-base border border-border rounded-[var(--r)] px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                          className="w-full max-w-[100px] bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                         />
                       )}
                     </td>
@@ -531,96 +487,27 @@ export function ProductForm({
         <div className="p-4 bg-bg-base border-t border-border flex items-center justify-end gap-2.5">
           <Link
             href="/products"
-            className="px-4 py-2 rounded-[var(--r)] bg-secondary hover:bg-secondary-hover text-text-primary border border-border text-[14px] font-medium transition-colors"
+            className="px-4 py-2 rounded-(--r) bg-secondary hover:bg-secondary-hover text-text-primary border border-border text-[14px] font-medium transition-colors"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-4 py-2 rounded-[var(--r)] bg-primary hover:bg-primary-hover disabled:opacity-50 text-text-light text-[14px] font-medium shadow-xs transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-(--r) bg-primary hover:bg-primary-hover disabled:opacity-50 text-text-light text-[14px] font-medium shadow-xs transition-colors cursor-pointer"
           >
             {isSubmitting ? 'Saving...' : 'Save product'}
           </button>
         </div>
       </form>
 
-      {/* Accessible Inline Category Creation Modal */}
-      {isCategoryModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="inline-cat-title"
-          className="fixed inset-0 z-50 bg-[#141613]/50 backdrop-blur-xs flex items-center justify-center p-4"
-        >
-          <div className="bg-bg-surface border border-border rounded-[var(--r)] shadow-lg max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between mb-4">
-              <h2
-                id="inline-cat-title"
-                className="text-[18px] font-bold text-text-primary m-0"
-              >
-                Add new category
-              </h2>
-              <button
-                type="button"
-                onClick={() => setIsCategoryModalOpen(false)}
-                className="text-text-muted hover:text-text-primary text-[18px] leading-none cursor-pointer"
-                aria-label="Close dialog"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-[14px] text-text-muted mt-0 mb-4">
-              Create a new category for products without leaving this form.
-            </p>
-
-            {categoryModalError && (
-              <div className="mb-4 p-3 rounded-[var(--r)] bg-danger/10 border border-danger-border/30 text-danger text-[13.5px]">
-                {categoryModalError}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateCategory}>
-              <div className="flex flex-col gap-1.5 mb-5">
-                <label
-                  htmlFor="new-category-name"
-                  className="text-[13.5px] font-semibold text-text-primary"
-                >
-                  Category name
-                </label>
-                <input
-                  id="new-category-name"
-                  type="text"
-                  autoFocus
-                  required
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="e.g. Cooking Oil"
-                  className="w-full bg-bg-base border border-border rounded-[var(--r)] px-3 py-2 text-[14.5px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus transition-colors"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsCategoryModalOpen(false)}
-                  className="px-4 py-2 rounded-[var(--r)] bg-secondary hover:bg-secondary-hover text-text-primary border border-border text-[14px] font-medium transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingCategory}
-                  className="px-4 py-2 rounded-[var(--r)] bg-primary hover:bg-primary-hover disabled:opacity-50 text-text-light text-[14px] font-medium shadow-xs transition-colors cursor-pointer"
-                >
-                  {isCreatingCategory ? 'Saving...' : 'Save category'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Standard Accessible Category Creation Modal */}
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        mode="add"
+        onClose={() => setIsCategoryModalOpen(false)}
+        onSave={handleSaveCategory}
+      />
     </div>
   );
 }
