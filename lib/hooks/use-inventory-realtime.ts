@@ -18,13 +18,15 @@ interface RealtimeVariantRow {
 
 export function useInventoryRealtime(initialVariants: InventoryVariant[]) {
   const [variants, setVariants] = useState<InventoryVariant[]>(initialVariants);
-  const [prevInitialVariants, setPrevInitialVariants] = useState(initialVariants);
+  const prevInitialVariantsRef = useRef(initialVariants);
 
-  // Synchronize state during render if parent initialVariants changes
-  if (initialVariants !== prevInitialVariants) {
-    setPrevInitialVariants(initialVariants);
-    setVariants(initialVariants);
-  }
+  // Synchronize state when parent initialVariants prop reference updates
+  useEffect(() => {
+    if (initialVariants !== prevInitialVariantsRef.current) {
+      prevInitialVariantsRef.current = initialVariants;
+      setVariants(initialVariants);
+    }
+  }, [initialVariants]);
 
   // Handle single variant update
   const handleVariantUpdate = useCallback((updatedRow: RealtimeVariantRow) => {
@@ -178,7 +180,9 @@ export function useInventoryRealtime(initialVariants: InventoryVariant[]) {
         window.removeEventListener('arl:products-updated', handleLocalUpdate);
       }
       broadcastChannel?.close();
-      supabase?.removeChannel(channel);
+      if (supabase && channel) {
+        void supabase.removeChannel(channel);
+      }
     };
   }, [handleVariantUpdate, scheduleRefresh]);
 

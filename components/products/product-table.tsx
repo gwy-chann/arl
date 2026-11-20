@@ -45,9 +45,9 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
     return products.filter((p) => {
       const matchName = p.name.toLowerCase().includes(q);
       const matchCat = (p.category_name || '').toLowerCase().includes(q);
-      const matchSize = p.variants.some((v) =>
+      const matchSize = p.variants?.some((v) =>
         getSizeLabel(v.size).toLowerCase().includes(q)
-      );
+      ) ?? false;
       return matchName || matchCat || matchSize;
     });
   }, [products, searchQuery]);
@@ -205,8 +205,79 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                 </tr>
               ) : (
                 filteredProducts.map((p) => {
-                  const variantCount = p.variants.length || 1;
-                  return p.variants.map((v, i) => (
+                  const variants = p.variants && p.variants.length > 0 ? p.variants : [];
+                  const variantCount = variants.length || 1;
+
+                  if (variants.length === 0) {
+                    return (
+                      <tr
+                        key={p.id}
+                        className="hover:bg-bg-hover/50 transition-colors"
+                        data-product={p.name}
+                      >
+                        <td className="px-4 py-3.5 align-middle border-r border-border bg-bg-surface">
+                          <b className="text-[15.5px] font-bold text-text-primary block leading-tight">
+                            {p.name}
+                          </b>
+                          <span className="text-[13px] text-text-muted block mt-0.5">
+                            {p.category_name || 'Uncategorized'}
+                          </span>
+                        </td>
+                        <td
+                          colSpan={6}
+                          className="px-4 py-3.5 text-text-muted italic text-[14px]"
+                        >
+                          No packaging variants configured
+                        </td>
+                        <td
+                          className="px-4 py-3.5 align-middle text-right whitespace-nowrap bg-bg-surface"
+                          style={{ width: '150px' }}
+                        >
+                          <div className="inline-flex items-center gap-1.5">
+                            <Link
+                              href={`/products/${p.id}/edit`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-[var(--r)] bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
+                            >
+                              <svg
+                                className="w-3.5 h-3.5 stroke-current"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                              </svg>
+                              Edit
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProduct(p)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-[var(--r)] bg-danger/10 hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
+                            >
+                              <svg
+                                className="w-3.5 h-3.5 stroke-current"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                              </svg>
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return variants.map((v, i) => (
                     <tr
                       key={v.id || `${p.id}-${v.size}`}
                       className="hover:bg-bg-hover/50 transition-colors"
@@ -238,7 +309,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                         {formatPeso(v.selling_price)}
                       </td>
                       <td className="px-4 py-3.5 text-right text-[14px] tabular-nums text-text-primary font-mono font-medium">
-                        {formatPeso(v.unit_profit)}
+                        {formatPeso(v.unit_profit ?? (v.selling_price - v.cost_price))}
                       </td>
                       <td className="px-4 py-3.5 text-right text-[14px] tabular-nums text-text-primary font-mono">
                         {v.stock_quantity}

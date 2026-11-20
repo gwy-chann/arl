@@ -16,15 +16,17 @@ export function useProductsRealtime(
   initialProducts: ProductWithVariants[]
 ): UseProductsRealtimeResult {
   const [products, setProducts] = useState<ProductWithVariants[]>(initialProducts);
-  const [prevInitialProducts, setPrevInitialProducts] = useState(initialProducts);
+  const prevInitialProductsRef = useRef(initialProducts);
   const [isConnected, setIsConnected] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Synchronize state during render if parent initialProducts changes
-  if (initialProducts !== prevInitialProducts) {
-    setPrevInitialProducts(initialProducts);
-    setProducts(initialProducts);
-  }
+  // Synchronize state when parent initialProducts prop reference updates
+  useEffect(() => {
+    if (initialProducts !== prevInitialProductsRef.current) {
+      prevInitialProductsRef.current = initialProducts;
+      setProducts(initialProducts);
+    }
+  }, [initialProducts]);
 
   // Refetch latest products from server action (with joined categories, profit calculation, sorting)
   const refreshProducts = useCallback(async () => {

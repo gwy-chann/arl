@@ -47,7 +47,7 @@ export function ProductForm({
   const [name, setName] = useState(initialProduct?.name || '');
   const [categoriesList, setCategoriesList] = useState<CategoryOption[]>(categories);
   const [categoryId, setCategoryId] = useState<string>(
-    initialProduct?.category_id || (categories[0]?.id ?? '')
+    initialProduct ? (initialProduct.category_id ?? '') : (categories[0]?.id ?? '')
   );
 
   // Initialize variants: existing variants for edit mode, or standard presets for new mode
@@ -551,7 +551,7 @@ export function ProductForm({
           role="dialog"
           aria-modal="true"
           aria-labelledby="inline-cat-title"
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-[#141613]/50 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <div className="bg-bg-surface border border-border rounded-[var(--r)] shadow-lg max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between mb-4">
