@@ -11,17 +11,32 @@ import {
 import { useConfirm } from '@/components/ui/confirm-provider';
 import { useToast } from '@/components/ui/toast-provider';
 import { deleteProductAction } from '@/lib/products/product-actions';
+import { useProductsRealtime } from '@/lib/hooks/use-products-realtime';
+import { notifyProductsUpdated } from '@/lib/products/product-events';
 
 interface ProductTableProps {
   initialProducts: ProductWithVariants[];
 }
 
 export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
-  const [products, setProducts] = useState<ProductWithVariants[]>(initialProducts);
+  const { products, setProducts } = useProductsRealtime(initialProducts);
   const [searchQuery, setSearchQuery] = useState('');
   const confirm = useConfirm();
   const { showToast } = useToast();
   const [, startTransition] = useTransition();
+
+  const totalVariantsCount = useMemo(() => {
+    return products.reduce((acc, p) => acc + (p.variants?.length || 0), 0);
+  }, [products]);
+
+  const subtitle = useMemo(() => {
+    if (products.length === 3 && totalVariantsCount === 9) {
+      return 'Three products, three sizes each: nine sellable items.';
+    }
+    const productWord = products.length === 1 ? 'product' : 'products';
+    const itemWord = totalVariantsCount === 1 ? 'sellable item' : 'sellable items';
+    return `${products.length} ${productWord}, ${totalVariantsCount} ${itemWord}.`;
+  }, [products.length, totalVariantsCount]);
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -30,9 +45,9 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
     return products.filter((p) => {
       const matchName = p.name.toLowerCase().includes(q);
       const matchCat = (p.category_name || '').toLowerCase().includes(q);
-      const matchSize = p.variants.some((v) =>
+      const matchSize = p.variants?.some((v) =>
         getSizeLabel(v.size).toLowerCase().includes(q)
-      );
+      ) ?? false;
       return matchName || matchCat || matchSize;
     });
   }, [products, searchQuery]);
@@ -59,6 +74,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
     startTransition(() => {
       setProducts((prev) => prev.filter((p) => p.id !== product.id));
     });
+    notifyProductsUpdated();
     showToast('Product deleted');
   };
 
@@ -71,13 +87,13 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
             Products
           </h1>
           <p className="text-[14.5px] text-text-muted mt-1 m-0">
-            Three products, three sizes each: nine sellable items.
+            {subtitle}
           </p>
         </div>
         <div>
           <Link
             href="/products/new"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[var(--r)] bg-primary hover:bg-primary-hover text-text-light font-medium text-[14px] shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-(--r) bg-primary hover:bg-primary-hover text-text-light font-medium text-[14px] shadow-xs transition-colors"
           >
             <svg
               className="w-4 h-4 stroke-current"
@@ -97,7 +113,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
       </div>
 
       {/* Main Table Card */}
-      <div className="bg-bg-surface border border-border rounded-[var(--r)] shadow-xs overflow-hidden">
+      <div className="bg-bg-surface border border-border rounded-(--r) shadow-xs overflow-hidden">
         {/* Toolbar with Search Box */}
         <div className="p-3 bg-bg-base border-b border-border flex items-center justify-between">
           <div className="relative w-full max-w-sm">
@@ -106,7 +122,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products or sizes"
-              className="w-full bg-bg-surface border border-border rounded-[var(--r)] pl-3 pr-8 py-1.5 text-[14px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus transition-colors"
+              className="w-full bg-bg-surface border border-border rounded-(--r) pl-3 pr-8 py-1.5 text-[14px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus transition-colors"
               aria-label="Search products or sizes"
             />
             {searchQuery && (
@@ -189,8 +205,79 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                 </tr>
               ) : (
                 filteredProducts.map((p) => {
-                  const variantCount = p.variants.length || 1;
-                  return p.variants.map((v, i) => (
+                  const variants = p.variants && p.variants.length > 0 ? p.variants : [];
+                  const variantCount = variants.length || 1;
+
+                  if (variants.length === 0) {
+                    return (
+                      <tr
+                        key={p.id}
+                        className="hover:bg-bg-hover/50 transition-colors"
+                        data-product={p.name}
+                      >
+                        <td className="px-4 py-3.5 align-middle border-r border-border bg-bg-surface">
+                          <b className="text-[15.5px] font-bold text-text-primary block leading-tight">
+                            {p.name}
+                          </b>
+                          <span className="text-[13px] text-text-muted block mt-0.5">
+                            {p.category_name || 'Uncategorized'}
+                          </span>
+                        </td>
+                        <td
+                          colSpan={6}
+                          className="px-4 py-3.5 text-text-muted italic text-[14px]"
+                        >
+                          No packaging variants configured
+                        </td>
+                        <td
+                          className="px-4 py-3.5 align-middle text-right whitespace-nowrap bg-bg-surface"
+                          style={{ width: '150px' }}
+                        >
+                          <div className="inline-flex items-center gap-1.5">
+                            <Link
+                              href={`/products/${p.id}/edit`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
+                            >
+                              <svg
+                                className="w-3.5 h-3.5 stroke-current"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                              </svg>
+                              Edit
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProduct(p)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-danger/10 hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
+                            >
+                              <svg
+                                className="w-3.5 h-3.5 stroke-current"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                              </svg>
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return variants.map((v, i) => (
                     <tr
                       key={v.id || `${p.id}-${v.size}`}
                       className="hover:bg-bg-hover/50 transition-colors"
@@ -222,7 +309,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                         {formatPeso(v.selling_price)}
                       </td>
                       <td className="px-4 py-3.5 text-right text-[14px] tabular-nums text-text-primary font-mono font-medium">
-                        {formatPeso(v.unit_profit)}
+                        {formatPeso(v.unit_profit ?? (v.selling_price - v.cost_price))}
                       </td>
                       <td className="px-4 py-3.5 text-right text-[14px] tabular-nums text-text-primary font-mono">
                         {v.stock_quantity}
@@ -241,7 +328,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                           <div className="inline-flex items-center gap-1.5">
                             <Link
                               href={`/products/${p.id}/edit`}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-[var(--r)] bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
                             >
                               <svg
                                 className="w-3.5 h-3.5 stroke-current"
@@ -260,7 +347,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                             <button
                               type="button"
                               onClick={() => handleDeleteProduct(p)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-[var(--r)] bg-danger/10 hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-danger/10 hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
                             >
                               <svg
                                 className="w-3.5 h-3.5 stroke-current"
