@@ -93,7 +93,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
         <div>
           <Link
             href="/products/new"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[var(--r)] bg-primary hover:bg-primary-hover text-text-light font-medium text-[14px] shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-(--r) bg-primary hover:bg-primary-hover text-text-light font-medium text-[14px] shadow-xs transition-colors"
           >
             <svg
               className="w-4 h-4 stroke-current"
@@ -113,7 +113,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
       </div>
 
       {/* Main Table Card */}
-      <div className="bg-bg-surface border border-border rounded-[var(--r)] shadow-xs overflow-hidden">
+      <div className="bg-bg-surface border border-border rounded-(--r) shadow-xs overflow-hidden">
         {/* Toolbar with Search Box */}
         <div className="p-3 bg-bg-base border-b border-border flex items-center justify-between">
           <div className="relative w-full max-w-sm">
@@ -122,7 +122,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products or sizes"
-              className="w-full bg-bg-surface border border-border rounded-[var(--r)] pl-3 pr-8 py-1.5 text-[14px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus transition-colors"
+              className="w-full bg-bg-surface border border-border rounded-(--r) pl-3 pr-8 py-1.5 text-[14px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus transition-colors"
               aria-label="Search products or sizes"
             />
             {searchQuery && (
@@ -236,7 +236,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                           <div className="inline-flex items-center gap-1.5">
                             <Link
                               href={`/products/${p.id}/edit`}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-[var(--r)] bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
                             >
                               <svg
                                 className="w-3.5 h-3.5 stroke-current"
@@ -255,7 +255,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                             <button
                               type="button"
                               onClick={() => handleDeleteProduct(p)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-[var(--r)] bg-danger/10 hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-danger/10 hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
                             >
                               <svg
                                 className="w-3.5 h-3.5 stroke-current"
@@ -328,7 +328,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                           <div className="inline-flex items-center gap-1.5">
                             <Link
                               href={`/products/${p.id}/edit`}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-[var(--r)] bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-secondary hover:bg-secondary-hover text-text-primary border border-border transition-colors"
                             >
                               <svg
                                 className="w-3.5 h-3.5 stroke-current"
@@ -347,7 +347,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                             <button
                               type="button"
                               onClick={() => handleDeleteProduct(p)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-[var(--r)] bg-danger/10 hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-danger/10 hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
                             >
                               <svg
                                 className="w-3.5 h-3.5 stroke-current"

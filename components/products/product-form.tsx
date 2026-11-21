@@ -357,7 +357,7 @@ export function ProductForm({
             <table className="w-full text-left border-collapse" id="var-table">
               <thead>
                 <tr className="border-b border-border bg-bg-base/60 text-[12.5px] uppercase tracking-wider font-semibold text-text-muted">
-                  <th scope="col" className="px-3.5 py-2.5 min-w-[150px]">
+                  <th scope="col" className="px-3.5 py-2.5 min-w-37.5">
                     Packaging size
                   </th>
                   <th scope="col" className="px-3.5 py-2.5">
@@ -372,7 +372,7 @@ export function ProductForm({
                   <th scope="col" className="px-3.5 py-2.5">
                     Opening stock
                   </th>
-                  <th scope="col" className="px-3.5 py-2.5 text-right w-[60px]">
+                  <th scope="col" className="px-3.5 py-2.5 text-right w-15">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
@@ -407,7 +407,7 @@ export function ProductForm({
                         }
                         placeholder="0.00"
                         aria-label={`${v.size || 'Variant'} cost price`}
-                        className="w-full max-w-[120px] bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                        className="w-full max-w-30 bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                       />
                     </td>
                     <td className="px-3.5 py-2.5">
@@ -421,7 +421,7 @@ export function ProductForm({
                         }
                         placeholder="0.00"
                         aria-label={`${v.size || 'Variant'} selling price`}
-                        className="w-full max-w-[120px] bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                        className="w-full max-w-30 bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                       />
                     </td>
                     <td className="px-3.5 py-2.5">
@@ -435,14 +435,14 @@ export function ProductForm({
                         }
                         placeholder="0"
                         aria-label={`${v.size || 'Variant'} minimum stock`}
-                        className="w-full max-w-[100px] bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                        className="w-full max-w-25 bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                       />
                     </td>
                     <td className="px-3.5 py-2.5">
                       {isEdit && v.id ? (
                         <div className="flex items-center gap-1.5">
                           <span
-                            className="text-[13.5px] font-mono text-text-muted px-2.5 py-1.5 bg-bg-base/70 rounded-(--r) border border-border/50 block min-w-[70px] text-center select-none"
+                            className="text-[13.5px] font-mono text-text-muted px-2.5 py-1.5 bg-bg-base/70 rounded-(--r) border border-border/50 block min-w-17.5 text-center select-none"
                             title="Current stock quantity (managed via sales & movements)"
                           >
                             {v.opening_stock || '0'}
@@ -459,7 +459,7 @@ export function ProductForm({
                           }
                           placeholder="0"
                           aria-label={`${v.size || 'Variant'} opening stock`}
-                          className="w-full max-w-[100px] bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
+                          className="w-full max-w-25 bg-bg-base border border-border rounded-(--r) px-2.5 py-1.5 text-[14px] text-text-primary focus:outline-none focus:border-border-focus"
                         />
                       )}
                     </td>
