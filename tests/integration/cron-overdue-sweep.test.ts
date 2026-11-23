@@ -67,7 +67,7 @@ describe('Feature ARL-28: Scheduled Overdue SMS Sweep Orchestrator (Cron / Backg
   beforeEach(() => {
     process.env = { ...originalEnv };
     process.env.CRON_SECRET = TEST_SECRET;
-    process.env.PHILSMS_MOCK_DISPATCH = 'true';
+    process.env.TEXTBEE_MOCK_DISPATCH = 'true';
     _resetSmsHistory();
     _resetSmsAuditLogs();
     _resetSettingsStore();
@@ -342,7 +342,7 @@ describe('Feature ARL-28: Scheduled Overdue SMS Sweep Orchestrator (Cron / Backg
     });
   });
 
-  describe('Scenario 5: Resilience when external PhilSMS gateway fails during batch sweep', () => {
+  describe('Scenario 5: Resilience when external TextBee gateway fails during batch sweep', () => {
     it('isolates failure on 3rd sale, continues sweep, and reports errors: 1', async () => {
       const asOfDate = new Date('2026-11-18T08:00:00Z');
 
@@ -364,8 +364,9 @@ describe('Feature ARL-28: Scheduled Overdue SMS Sweep Orchestrator (Cron / Backg
 
       // Mock fetch so that the 3rd sale dispatch triggers a gateway error (503 / timeout)
       const originalFetch = globalThis.fetch;
-      process.env.PHILSMS_MOCK_DISPATCH = 'false';
-      process.env.PHILSMS_API_TOKEN = 'test-token';
+      process.env.TEXTBEE_MOCK_DISPATCH = 'false';
+      process.env.TEXTBEE_API_KEY = 'test-token';
+      process.env.TEXTBEE_DEVICE_ID = 'test-device';
 
       globalThis.fetch = async (_url, init) => {
         const bodyStr = init?.body ? String(init.body) : '';
@@ -377,11 +378,12 @@ describe('Feature ARL-28: Scheduled Overdue SMS Sweep Orchestrator (Cron / Backg
         }
         return new Response(
           JSON.stringify({
-            status: 'success',
-            message: 'SMS sent successfully',
-            data: { message_id: `msg-ok` },
+            data: { id: `tb_${Date.now()}` },
           }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
         );
       };
 

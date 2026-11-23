@@ -12,9 +12,6 @@ import {
   _resetTextBeeSendMock,
 } from '../lib/services/textbee-adapter.ts';
 import {
-  _resetPhilSmsMockHistory,
-} from '../lib/services/philsms-adapter.ts';
-import {
   dispatchSmsSafe,
   smsCircuitBreaker,
   CircuitBreaker,
@@ -33,12 +30,10 @@ describe('Feature ARL-41: Pluggable Multi-Gateway Router & Dynamic Provider Swit
     delete process.env.SMS_GATEWAY_PROVIDER;
     delete process.env.ACTIVE_SMS_GATEWAY;
     delete process.env.TEXTBEE_API_KEY;
-    process.env.PHILSMS_MOCK_DISPATCH = 'true';
     process.env.TEXTBEE_MOCK_DISPATCH = 'true';
 
     _resetGatewayRouterMock();
     _resetTextBeeSendMock();
-    _resetPhilSmsMockHistory();
     _resetSmsHistory();
     _resetSmsAuditLogs();
     smsCircuitBreaker.reset();
@@ -48,7 +43,6 @@ describe('Feature ARL-41: Pluggable Multi-Gateway Router & Dynamic Provider Swit
     process.env = { ...originalEnv };
     _resetGatewayRouterMock();
     _resetTextBeeSendMock();
-    _resetPhilSmsMockHistory();
     _resetSmsHistory();
     _resetSmsAuditLogs();
     smsCircuitBreaker.reset();
@@ -59,8 +53,6 @@ describe('Feature ARL-41: Pluggable Multi-Gateway Router & Dynamic Provider Swit
       assert.equal(normalizeProviderName('textbee'), 'textbee');
       assert.equal(normalizeProviderName('TEXTBEE'), 'textbee');
       assert.equal(normalizeProviderName(' TextBee '), 'textbee');
-      assert.equal(normalizeProviderName('philsms'), 'philsms');
-      assert.equal(normalizeProviderName('PHILSMS'), 'philsms');
       assert.equal(normalizeProviderName('mock'), 'mock');
       assert.equal(normalizeProviderName('MOCK'), 'mock');
       assert.equal(normalizeProviderName('invalid-provider'), null);
@@ -69,10 +61,10 @@ describe('Feature ARL-41: Pluggable Multi-Gateway Router & Dynamic Provider Swit
     });
 
     it('gives explicit call options the highest resolution priority', () => {
-      process.env.SMS_GATEWAY_PROVIDER = 'philsms';
+      process.env.SMS_GATEWAY_PROVIDER = 'mock';
       process.env.TEXTBEE_API_KEY = 'tb_secret_key';
 
-      // Explicit override in options wins over env var and auto-detection
+      // Explicit override in options wins over env var
       const resolved = resolveSmsGatewayProvider({ provider: 'textbee' });
       assert.equal(resolved, 'textbee');
 
@@ -84,9 +76,6 @@ describe('Feature ARL-41: Pluggable Multi-Gateway Router & Dynamic Provider Swit
       process.env.SMS_GATEWAY_PROVIDER = 'textbee';
       assert.equal(resolveSmsGatewayProvider(), 'textbee');
 
-      process.env.SMS_GATEWAY_PROVIDER = 'PHILSMS';
-      assert.equal(resolveSmsGatewayProvider(), 'philsms');
-
       process.env.SMS_GATEWAY_PROVIDER = 'mock';
       assert.equal(resolveSmsGatewayProvider(), 'mock');
     });
@@ -97,20 +86,12 @@ describe('Feature ARL-41: Pluggable Multi-Gateway Router & Dynamic Provider Swit
       assert.equal(resolveSmsGatewayProvider(), 'textbee');
     });
 
-    it('smart auto-detection defaults to textbee when TEXTBEE_API_KEY is configured', () => {
-      delete process.env.SMS_GATEWAY_PROVIDER;
-      delete process.env.ACTIVE_SMS_GATEWAY;
-      process.env.TEXTBEE_API_KEY = 'textbee_active_key_123';
-
-      assert.equal(resolveSmsGatewayProvider(), 'textbee');
-    });
-
-    it('smart auto-detection defaults to philsms when TEXTBEE_API_KEY is missing', () => {
+    it('defaults to textbee when configuration is empty', () => {
       delete process.env.SMS_GATEWAY_PROVIDER;
       delete process.env.ACTIVE_SMS_GATEWAY;
       delete process.env.TEXTBEE_API_KEY;
 
-      assert.equal(resolveSmsGatewayProvider(), 'philsms');
+      assert.equal(resolveSmsGatewayProvider(), 'textbee');
     });
   });
 
@@ -125,20 +106,6 @@ describe('Feature ARL-41: Pluggable Multi-Gateway Router & Dynamic Provider Swit
 
       assert.equal(result.success, true);
       assert.equal(result.provider, 'textbee');
-      assert.ok(result.messageId);
-      assert.equal(typeof result.messageId, 'string');
-    });
-
-    it('routes to PhilSMS and normalizes successful outcome', async () => {
-      process.env.SMS_GATEWAY_PROVIDER = 'philsms';
-
-      const result = await dispatchGatewaySms({
-        recipient: '09171234567',
-        message: 'Hello via PhilSMS Gateway Router',
-      });
-
-      assert.equal(result.success, true);
-      assert.equal(result.provider, 'philsms');
       assert.ok(result.messageId);
       assert.equal(typeof result.messageId, 'string');
     });
@@ -208,15 +175,15 @@ describe('Feature ARL-41: Pluggable Multi-Gateway Router & Dynamic Provider Swit
       assert.equal(result.errorMessage, 'Physical Android gateway device is offline');
     });
 
-    it('normalizes PhilSMS error into UnifiedSmsDispatchResult', async () => {
+    it('normalizes invalid recipient error into UnifiedSmsDispatchResult', async () => {
       const result = await dispatchGatewaySms({
-        recipient: '', // Empty recipient triggers PhilSMS error
+        recipient: '',
         message: 'Notice',
-        provider: 'philsms',
+        provider: 'textbee',
       });
 
       assert.equal(result.success, false);
-      assert.equal(result.provider, 'philsms');
+      assert.equal(result.provider, 'textbee');
       assert.equal(result.errorCode, 'INVALID_RECIPIENT_MOBILE');
     });
   });

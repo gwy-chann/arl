@@ -19,7 +19,7 @@ import {
   _resetSmsHistory,
   dispatchOverdueBalanceReminders,
 } from '../../lib/services/sms-service.ts';
-import { _resetPhilSmsMockHistory } from '../../lib/services/philsms-adapter.ts';
+import { _resetTextBeeMockHistory } from '../../lib/services/textbee-adapter.ts';
 import { smsCircuitBreaker } from '../../lib/services/sms-resilience.ts';
 import { resetInMemorySales } from '../../lib/sales/sale-service.ts';
 import { resetMemoryCustomerStore, updateCustomer } from '../../lib/customers/customer-service.ts';
@@ -30,10 +30,10 @@ describe('Feature ARL-26: SMS Dispatch & Delivery Audit Ledger with Message ID T
 
   beforeEach(() => {
     process.env = { ...originalEnv };
-    process.env.PHILSMS_MOCK_DISPATCH = 'true';
+    process.env.TEXTBEE_MOCK_DISPATCH = 'true';
     _resetSmsHistory();
     _resetSmsAuditLogs();
-    _resetPhilSmsMockHistory();
+    _resetTextBeeMockHistory();
     smsCircuitBreaker.reset();
     resetInMemorySales();
     resetMemoryCustomerStore();
@@ -44,7 +44,7 @@ describe('Feature ARL-26: SMS Dispatch & Delivery Audit Ledger with Message ID T
     process.env = { ...originalEnv };
     _resetSmsHistory();
     _resetSmsAuditLogs();
-    _resetPhilSmsMockHistory();
+    _resetTextBeeMockHistory();
     smsCircuitBreaker.reset();
   });
 
@@ -56,8 +56,8 @@ describe('Feature ARL-26: SMS Dispatch & Delivery Audit Ledger with Message ID T
         recipientMobile: '09171234567',
         recipientType: 'CUSTOMER',
         messageBody: 'ARLQ Alert: Balance reminder',
-        gatewayName: 'PHILSMS',
-        gatewayMessageId: 'philsms_uid_88412',
+        gatewayName: 'TEXTBEE',
+        gatewayMessageId: 'textbee_msg_88412',
         status: 'SENT',
         latencyMs: 145,
       };
@@ -65,7 +65,7 @@ describe('Feature ARL-26: SMS Dispatch & Delivery Audit Ledger with Message ID T
       const parsed = createSmsDispatchLogSchema.parse(input);
       assert.equal(parsed.recipientType, 'CUSTOMER');
       assert.equal(parsed.status, 'SENT');
-      assert.equal(parsed.gatewayMessageId, 'philsms_uid_88412');
+      assert.equal(parsed.gatewayMessageId, 'textbee_msg_88412');
       assert.equal(parsed.latencyMs, 145);
     });
 
@@ -106,7 +106,7 @@ describe('Feature ARL-26: SMS Dispatch & Delivery Audit Ledger with Message ID T
         recipient_mobile: '0917 123 4567',
         recipient_type: 'CUSTOMER',
         message_body: 'Notice',
-        gateway_name: 'PHILSMS',
+        gateway_name: 'TEXTBEE',
         gateway_message_id: 'uid-999',
         status: 'SENT',
         error_reason: null,
@@ -129,8 +129,8 @@ describe('Feature ARL-26: SMS Dispatch & Delivery Audit Ledger with Message ID T
     });
   });
 
-  describe('Scenario: Audit entry recorded on successful PhilSMS dispatch', () => {
-    it('records SENT audit log with PhilSMS uid, recipient type, and execution latency', async () => {
+  describe('Scenario: Audit entry recorded on successful TextBee dispatch', () => {
+    it('records SENT audit log with TextBee uid, recipient type, and execution latency', async () => {
       const saleId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
       const customerId = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22';
 
@@ -140,15 +140,15 @@ describe('Feature ARL-26: SMS Dispatch & Delivery Audit Ledger with Message ID T
         recipientMobile: '09171234567',
         recipientType: 'CUSTOMER',
         messageBody: 'ARLQ Alert: Receipt #1001 balance of P1,500.00 is due.',
-        gatewayName: 'PHILSMS',
-        gatewayMessageId: 'philsms_uid_88412',
+        gatewayName: 'TEXTBEE',
+        gatewayMessageId: 'textbee_msg_88412',
         status: 'SENT',
         latencyMs: 142,
       });
 
       assert.ok(log.id, 'Expected generated ID for audit log');
       assert.equal(log.status, 'SENT');
-      assert.equal(log.gatewayMessageId, 'philsms_uid_88412');
+      assert.equal(log.gatewayMessageId, 'textbee_msg_88412');
       assert.equal(log.recipientType, 'CUSTOMER');
       assert.equal(log.latencyMs, 142);
       assert.equal(log.saleId, saleId);
@@ -157,7 +157,7 @@ describe('Feature ARL-26: SMS Dispatch & Delivery Audit Ledger with Message ID T
 
       const inMemory = _getInMemorySmsAuditLogs();
       assert.equal(inMemory.length, 1);
-      assert.equal(inMemory[0].gatewayMessageId, 'philsms_uid_88412');
+      assert.equal(inMemory[0].gatewayMessageId, 'textbee_msg_88412');
     });
   });
 
@@ -167,7 +167,7 @@ describe('Feature ARL-26: SMS Dispatch & Delivery Audit Ledger with Message ID T
         recipientMobile: '09171234567',
         recipientType: 'CUSTOMER',
         messageBody: 'Payment reminder',
-        gatewayName: 'PHILSMS',
+        gatewayName: 'TEXTBEE',
         gatewayMessageId: null,
         status: 'FAILED',
         errorReason: 'HTTP 422: Recipient rejected by telco network',
