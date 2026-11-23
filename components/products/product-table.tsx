@@ -96,7 +96,7 @@ export function ProductTable({
         prev.map((c) => {
           if (
             c.id === product.category_id ||
-            (product.category_name && c.name.toLowerCase() === product.category_name.toLowerCase())
+            (c.name.toLowerCase() === product.category_name?.toLowerCase())
           ) {
             return { ...c, product_count: Math.max(0, c.product_count - 1) };
           }
@@ -166,7 +166,7 @@ export function ProductTable({
       const targetCategory = categories.find(
         (c) =>
           (product.category_id && c.id === product.category_id) ||
-          (product.category_name && c.name.toLowerCase() === product.category_name.toLowerCase())
+          (c.name.toLowerCase() === product.category_name?.toLowerCase())
       );
       const catIdToDelete = targetCategory?.id || product.category_id;
 

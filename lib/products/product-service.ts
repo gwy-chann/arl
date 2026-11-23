@@ -635,13 +635,11 @@ export class ProductService {
       existing.variants = sortVariants(
         validated.variants.map((v) => {
           let oldVar = v.id ? existing.variants.find((ov) => ov.id === v.id) : undefined;
-          if (!oldVar) {
-            oldVar = existing.variants.find(
+          oldVar ??= existing.variants.find(
               (ov) =>
                 ov.size.toLowerCase().trim() === v.size.toLowerCase().trim() ||
                 normalizeSizeKey(ov.size).toLowerCase() === normalizeSizeKey(v.size).toLowerCase()
             );
-          }
           const cost = Number(v.cost_price);
           const price = Number(v.selling_price);
           return {
