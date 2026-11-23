@@ -13,6 +13,7 @@ export interface CreateProductInput {
   name: string;
   category_id?: string | null;
   variants: {
+    id?: string;
     size: ProductSizeKey;
     cost_price: number;
     selling_price: number;
@@ -26,6 +27,7 @@ export interface UpdateProductInput {
   name: string;
   category_id?: string | null;
   variants: {
+    id?: string;
     size: ProductSizeKey;
     cost_price: number;
     selling_price: number;
@@ -230,6 +232,7 @@ function mapVariantRow(row: SupabaseVariantRow): ProductVariantDTO {
 }
 
 export function normalizeSizeKey(s: string): string {
+  if (!s || typeof s !== 'string') return '';
   const lower = s.trim().toLowerCase();
   if (lower === '350' || lower === '350 ml' || lower === '350ml') return '350';
   if (lower === '1l' || lower === '1 l' || lower === '1 liter' || lower === '1liter') return '1L';
@@ -285,16 +288,21 @@ export class ProductService {
 
       if (error || !data) {
         console.warn('Supabase products fetch error:', error);
-        return [];
+        return [...inMemoryProducts];
+      }
+
+      if (data.length === 0) {
+        return [...inMemoryProducts];
       }
 
       return (data as unknown as SupabaseProductRow[]).map((p) => {
         const variants = (p.product_variants || []).map(mapVariantRow);
+        const catName = Array.isArray(p.categories) ? p.categories[0]?.name : p.categories?.name ?? null;
         return {
           id: p.id,
           name: p.name,
           category_id: p.category_id,
-          category_name: p.categories?.name ?? null,
+          category_name: catName,
           variants: sortVariants(variants),
           created_at: p.created_at,
           updated_at: p.updated_at,
@@ -302,7 +310,7 @@ export class ProductService {
       });
     } catch (err) {
       console.warn('Supabase products fetch exception:', err);
-      return [];
+      return [...inMemoryProducts];
     }
   }
 
@@ -310,11 +318,30 @@ export class ProductService {
    * Retrieves a specific product by ID.
    */
   async getProductById(id: string): Promise<ProductWithVariants | null> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const inMem = inMemoryProducts.find(
+      (p) => p.id === id || (p.name && id.toLowerCase().includes(p.name.toLowerCase()))
+    );
+
     if (!this.supabase) {
-      return inMemoryProducts.find((p) => p.id === id) ?? null;
+      return inMem ?? null;
     }
 
     try {
+      let targetId = id;
+      if (!isUuid && inMem?.name) {
+        const { data: dbProd } = await this.supabase
+          .from('products')
+          .select('id')
+          .ilike('name', inMem.name.trim())
+          .maybeSingle();
+        if (dbProd) {
+          targetId = dbProd.id;
+        } else {
+          return inMem ?? null;
+        }
+      }
+
       const { data, error } = await this.supabase
         .from('products')
         .select(`
@@ -336,27 +363,28 @@ export class ProductService {
             updated_at
           )
         `)
-        .eq('id', id)
+        .eq('id', targetId)
         .single();
 
       if (error || !data) {
-        return null;
+        return inMem ?? null;
       }
 
       const p = data as unknown as SupabaseProductRow;
       const variants = (p.product_variants || []).map(mapVariantRow);
+      const catName = Array.isArray(p.categories) ? p.categories[0]?.name : p.categories?.name ?? null;
 
       return {
         id: p.id,
         name: p.name,
         category_id: p.category_id,
-        category_name: p.categories?.name ?? null,
+        category_name: catName,
         variants: sortVariants(variants),
         created_at: p.created_at,
         updated_at: p.updated_at,
       };
     } catch {
-      return null;
+      return inMem ?? null;
     }
   }
 
@@ -384,7 +412,7 @@ export class ProductService {
       return trimmed;
     }
 
-    const mappedName = DEFAULT_CATEGORY_NAMES[trimmed];
+    const mappedName = DEFAULT_CATEGORY_NAMES[trimmed] || trimmed;
     if (mappedName) {
       const { data: existingCat } = await this.supabase
         .from('categories')
@@ -415,11 +443,10 @@ export class ProductService {
    */
   async getProductByName(name: string): Promise<ProductWithVariants | null> {
     const trimmed = name.trim().toLowerCase();
+    const inMem = inMemoryProducts.find((p) => p.name.trim().toLowerCase() === trimmed) || null;
+
     if (!this.supabase) {
-      return (
-        inMemoryProducts.find((p) => p.name.trim().toLowerCase() === trimmed) ||
-        null
-      );
+      return inMem;
     }
 
     try {
@@ -431,12 +458,12 @@ export class ProductService {
         .maybeSingle();
 
       if (error || !data) {
-        return null;
+        return inMem;
       }
 
       return await this.getProductById(data.id);
     } catch {
-      return null;
+      return inMem;
     }
   }
 
@@ -589,8 +616,13 @@ export class ProductService {
       variants: input.variants,
     });
 
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.id);
+    const inMem = inMemoryProducts.find(
+      (p) => p.id === input.id || (p.name && input.id.toLowerCase().includes(p.name.toLowerCase()))
+    );
+
     if (!this.supabase) {
-      const existing = inMemoryProducts.find((p) => p.id === input.id);
+      const existing = inMemoryProducts.find((p) => p.id === input.id) || inMem;
       if (!existing) {
         throw new Error(`Product with ID "${input.id}" not found`);
       }
@@ -633,6 +665,18 @@ export class ProductService {
     const resolvedCatId = await this.resolveCategoryId(validated.category_id);
 
     try {
+      let targetId = input.id;
+      if (!isUuid && inMem?.name) {
+        const { data: dbProd } = await this.supabase
+          .from('products')
+          .select('id')
+          .ilike('name', inMem.name.trim())
+          .maybeSingle();
+        if (dbProd) {
+          targetId = dbProd.id;
+        }
+      }
+
       // 1. Update product table
       const { data: prodData, error: prodError } = await this.supabase
         .from('products')
@@ -640,7 +684,7 @@ export class ProductService {
           name: validated.name,
           category_id: resolvedCatId,
         })
-        .eq('id', input.id)
+        .eq('id', targetId)
         .select('id, name, category_id, created_at, updated_at')
         .single();
 
@@ -652,7 +696,7 @@ export class ProductService {
       const { data: existingVariantsData } = await this.supabase
         .from('product_variants')
         .select('*')
-        .eq('product_id', input.id);
+        .eq('product_id', targetId);
 
       const existingById = new Map(
         (existingVariantsData || []).map((row) => [row.id, row])
@@ -685,7 +729,7 @@ export class ProductService {
           await this.supabase
             .from('product_variants')
             .insert({
-              product_id: input.id,
+              product_id: targetId,
               size: v.size.trim(),
               cost_price: v.cost_price,
               selling_price: v.selling_price,
@@ -709,12 +753,12 @@ export class ProductService {
         }
       }
 
-      const updated = await this.getProductById(input.id);
+      const updated = await this.getProductById(targetId);
       if (!updated) {
         throw new Error('Failed to retrieve updated product');
       }
 
-      const idx = inMemoryProducts.findIndex((p) => p.id === input.id);
+      const idx = inMemoryProducts.findIndex((p) => p.id === input.id || p.id === targetId);
       if (idx !== -1) inMemoryProducts[idx] = updated;
 
       return updated;
@@ -840,6 +884,12 @@ export class ProductService {
         return { product: p, variant: v };
       }
     }
+    for (const p of inMemoryProducts) {
+      const v = p.variants.find((variant) => variant.id === variantId);
+      if (v) {
+        return { product: p, variant: v };
+      }
+    }
     return null;
   }
 
@@ -851,7 +901,9 @@ export class ProductService {
     variantId: string,
     delta: number
   ): Promise<{ product: ProductWithVariants; variant: ProductVariantDTO }> {
-    if (!this.supabase) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(variantId);
+
+    if (!this.supabase || !isUuid) {
       for (const p of inMemoryProducts) {
         const v = p.variants.find((variant) => variant.id === variantId);
         if (v) {
@@ -865,7 +917,9 @@ export class ProductService {
           return { product: p, variant: v };
         }
       }
-      throw new Error(`Variant with ID "${variantId}" not found`);
+      if (!this.supabase) {
+        throw new Error(`Variant with ID "${variantId}" not found`);
+      }
     }
 
     try {
