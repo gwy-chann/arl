@@ -1,5 +1,7 @@
 import { sendSmsViaPhilSms } from './philsms-adapter.ts';
+import { sendSmsViaTextBee } from './textbee-adapter.ts';
 import type { PhilSmsSendResult, PhilSmsErrorCode } from './philsms-contracts.ts';
+import type { TextBeeErrorCode, TextBeeSendResult } from './textbee-contracts.ts';
 import type { SmsDispatchPayload } from './sms-contracts.ts';
 
 export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
@@ -9,6 +11,8 @@ export type ResilienceErrorCode =
   | 'CIRCUIT_OPEN'
   | 'GATEWAY_ERROR'
   | 'INVALID_INPUT';
+
+export type SmsGateway = 'PHILSMS' | 'TEXTBEE' | string;
 
 export interface CircuitBreakerConfig {
   /** Maximum consecutive failures before tripping from CLOSED to OPEN. Default: 3 */
@@ -25,6 +29,10 @@ export interface CircuitBreakerConfig {
   jitterMs?: number;
   /** Clock injection provider for deterministic testing. Default: Date.now */
   nowFn?: () => number;
+}
+
+export interface SafeSmsDispatchOptions extends CircuitBreakerConfig {
+  gateway?: SmsGateway;
 }
 
 export interface SafeSmsDispatchResult {
@@ -202,11 +210,11 @@ export const smsCircuitBreaker = new CircuitBreaker();
  */
 export function isRetryableError(
   errorOrStatus?: unknown,
-  errorCode?: PhilSmsErrorCode | string
+  errorCode?: PhilSmsErrorCode | TextBeeErrorCode | string
 ): boolean {
   // Non-retryable HTTP client & configuration errors
   if (typeof errorOrStatus === 'number') {
-    if ([400, 401, 402, 422].includes(errorOrStatus)) {
+    if ([400, 401, 402, 404, 422].includes(errorOrStatus)) {
       return false;
     }
     if ([429, 500, 502, 503, 504].includes(errorOrStatus)) {
@@ -214,7 +222,7 @@ export function isRetryableError(
     }
   }
 
-  // Non-retryable PhilSMS domain error codes
+  // Gateway domain error codes
   if (errorCode) {
     if (
       [
@@ -223,11 +231,20 @@ export function isRetryableError(
         'INSUFFICIENT_CREDITS',
         'INVALID_RECIPIENT_MOBILE',
         'INVALID_INPUT',
+        'DEVICE_NOT_FOUND',
       ].includes(errorCode)
     ) {
       return false;
     }
-    if (['NETWORK_UNREACHABLE', 'GATEWAY_RATE_LIMITED', 'TIMEOUT'].includes(errorCode)) {
+    if (
+      [
+        'NETWORK_UNREACHABLE',
+        'GATEWAY_RATE_LIMITED',
+        'TIMEOUT',
+        'DEVICE_OFFLINE',
+        'GATEWAY_SERVER_ERROR',
+      ].includes(errorCode)
+    ) {
       return true;
     }
   }
@@ -247,7 +264,9 @@ export function isRetryableError(
       msg.includes('econnreset') ||
       msg.includes('enotfound') ||
       msg.includes('fetch failed') ||
-      msg.includes('network')
+      msg.includes('network') ||
+      msg.includes('offline') ||
+      msg.includes('disconnected')
     ) {
       return true;
     }
@@ -315,20 +334,27 @@ export function sleep(ms: number): Promise<void> {
 /**
  * Non-blocking safe SMS dispatcher wrapper.
  * Integrates:
+ * - Multi-gateway support (PHILSMS or TEXTBEE)
  * - Immediate fast-fail when Circuit Breaker is OPEN (< 1ms)
  * - 5,000ms AbortController timeout protection
  * - 1-attempt exponential backoff retry for transient gateway / network errors
- * - Non-retryable error fast-fail (400, 401, 402, 422)
+ * - Non-retryable error fast-fail (400, 401, 402, 404, 422)
  * - Guaranteed non-throwing envelope return (`SafeSmsDispatchResult`)
  */
 export async function dispatchSmsSafe(
   payload: SmsDispatchPayload,
-  options?: Partial<CircuitBreakerConfig>,
+  options?: Partial<SafeSmsDispatchOptions>,
   customBreaker?: CircuitBreaker
 ): Promise<SafeSmsDispatchResult> {
   const startTime = Date.now();
   const breaker = customBreaker || smsCircuitBreaker;
   const cfg = { ...breaker.getConfig(), ...options };
+  const targetGateway = (
+    options?.gateway ||
+    process.env.SMS_GATEWAY_PROVIDER ||
+    process.env.ACTIVE_SMS_GATEWAY ||
+    'PHILSMS'
+  ).toUpperCase();
 
   // 1. Client-side input validation guard
   if (!payload || !payload.recipientMobile || !payload.recipientMobile.trim()) {
@@ -353,7 +379,7 @@ export async function dispatchSmsSafe(
     };
   }
 
-  // 2. Circuit Breaker Fast-Fail Check
+  // 2. Circuit Breaker Fast-Fail Check (< 1ms)
   if (!breaker.canExecute()) {
     return {
       success: false,
@@ -366,7 +392,7 @@ export async function dispatchSmsSafe(
   }
 
   let lastError: Error | null = null;
-  let lastResult: PhilSmsSendResult | null = null;
+  let lastResult: PhilSmsSendResult | TextBeeSendResult | null = null;
   const maxRetries = cfg.maxRetries ?? 1;
   const timeoutMs = cfg.timeoutMs ?? 5000;
   let attemptsMade = 0;
@@ -376,12 +402,20 @@ export async function dispatchSmsSafe(
 
     try {
       const result = await executeWithTimeout(
-        async (signal) =>
-          sendSmsViaPhilSms({
+        async (signal) => {
+          if (targetGateway === 'TEXTBEE') {
+            return sendSmsViaTextBee({
+              recipient: payload.recipientMobile,
+              message: payload.message,
+              signal,
+            });
+          }
+          return sendSmsViaPhilSms({
             recipient: payload.recipientMobile,
             message: payload.message,
             signal,
-          }),
+          });
+        },
         timeoutMs
       );
 
@@ -407,10 +441,10 @@ export async function dispatchSmsSafe(
 
       if (!retryable) {
         // Non-transient failure: do not trip breaker, do not retry
-        const mappedCode: ResilienceErrorCode =
-          result.errorCode === 'INVALID_RECIPIENT_MOBILE'
-            ? 'INVALID_INPUT'
-            : 'GATEWAY_ERROR';
+        const isInputError =
+          result.errorCode === 'INVALID_RECIPIENT_MOBILE' ||
+          (result.errorCode as string) === 'INVALID_INPUT';
+        const mappedCode: ResilienceErrorCode = isInputError ? 'INVALID_INPUT' : 'GATEWAY_ERROR';
 
         return {
           success: false,
@@ -433,7 +467,7 @@ export async function dispatchSmsSafe(
         breaker.recordFailure();
         return {
           success: false,
-          errorCode: 'GATEWAY_ERROR',
+          errorCode: result.errorCode === 'TIMEOUT' ? 'TIMEOUT' : 'GATEWAY_ERROR',
           error: result.errorMessage || 'SMS Gateway transmission failure',
           circuitState: breaker.getState(),
           durationMs: Date.now() - startTime,
@@ -446,6 +480,7 @@ export async function dispatchSmsSafe(
       const isTimeout =
         lastError instanceof SmsTimeoutError ||
         lastError.name === 'AbortError' ||
+        lastError.name === 'TimeoutError' ||
         lastError.message.includes('timeout');
 
       if (attempt < maxRetries) {

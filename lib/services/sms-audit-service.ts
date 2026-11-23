@@ -41,6 +41,12 @@ export async function recordSmsDispatchLog(
     ? crypto.randomUUID()
     : `log_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
+  const effectiveLatency =
+    validated.latencyMs ??
+    validated.executionLatencyMs ??
+    validated.execution_latency_ms ??
+    null;
+
   const dto: SmsDispatchLogDTO = {
     id,
     saleId: validated.saleId ?? null,
@@ -52,7 +58,8 @@ export async function recordSmsDispatchLog(
     gatewayMessageId: validated.gatewayMessageId ?? null,
     status: validated.status,
     errorReason: validated.errorReason ?? null,
-    latencyMs: validated.latencyMs ?? null,
+    latencyMs: effectiveLatency,
+    executionLatencyMs: effectiveLatency,
     dispatchedAt: nowIso,
     createdAt: nowIso,
     // Database snake_case aliases
@@ -64,7 +71,8 @@ export async function recordSmsDispatchLog(
     gateway_name: validated.gatewayName || 'PHILSMS',
     gateway_message_id: validated.gatewayMessageId ?? null,
     error_reason: validated.errorReason ?? null,
-    latency_ms: validated.latencyMs ?? null,
+    latency_ms: effectiveLatency,
+    execution_latency_ms: effectiveLatency,
     dispatched_at: nowIso,
     created_at: nowIso,
   };
