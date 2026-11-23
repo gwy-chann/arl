@@ -88,6 +88,10 @@ export function _getDispatchedSmsHistory(): SmsDispatchPayload[] {
   return [...dispatchedSmsHistory];
 }
 
+export interface DispatchSmsOptions {
+  gateway?: 'PHILSMS' | 'TEXTBEE' | string;
+}
+
 /**
  * Core SMS Dispatcher sending message to SMS gateway provider.
  * Uses a resilient mock logger in test and local environments,
@@ -95,10 +99,17 @@ export function _getDispatchedSmsHistory(): SmsDispatchPayload[] {
  */
 export async function dispatchSms(
   payload: SmsDispatchPayload,
-  supabaseClient?: SupabaseClient | null
+  supabaseClient?: SupabaseClient | null,
+  options?: DispatchSmsOptions
 ): Promise<SmsDispatchResult> {
   const norm = validateAndNormalizePhilippineMobile(payload.recipientMobile);
   const nowIso = new Date().toISOString();
+  const gatewayName = (
+    options?.gateway ||
+    process.env.SMS_GATEWAY_PROVIDER ||
+    process.env.ACTIVE_SMS_GATEWAY ||
+    'PHILSMS'
+  ).toUpperCase();
 
   if (!norm.isValid) {
     const errorMsg = norm.error || 'Invalid mobile number';
@@ -111,7 +122,7 @@ export async function dispatchSms(
         recipientMobile: payload.recipientMobile,
         recipientType: payload.recipientType,
         messageBody: payload.message,
-        gatewayName: 'PHILSMS',
+        gatewayName,
         gatewayMessageId: null,
         status: 'SKIPPED',
         errorReason: errorMsg,
@@ -133,10 +144,15 @@ export async function dispatchSms(
   }
 
   try {
-    const safeResult = await dispatchSmsSafe({
-      ...payload,
-      recipientMobile: norm.clean || payload.recipientMobile,
-    });
+    const safeResult = await dispatchSmsSafe(
+      {
+        ...payload,
+        recipientMobile: norm.clean || payload.recipientMobile,
+      },
+      {
+        gateway: gatewayName,
+      }
+    );
 
     if (safeResult.success) {
       // Record into legacy memory history
@@ -156,7 +172,7 @@ export async function dispatchSms(
           recipientMobile: norm.clean || payload.recipientMobile,
           recipientType: payload.recipientType,
           messageBody: payload.message,
-          gatewayName: 'PHILSMS',
+          gatewayName,
           gatewayMessageId: messageId,
           status: 'SENT',
           errorReason: null,
@@ -187,7 +203,7 @@ export async function dispatchSms(
         recipientMobile: norm.clean || payload.recipientMobile,
         recipientType: payload.recipientType,
         messageBody: payload.message,
-        gatewayName: 'PHILSMS',
+        gatewayName,
         gatewayMessageId: null,
         status: 'FAILED',
         errorReason: errorMsg,
@@ -217,7 +233,7 @@ export async function dispatchSms(
         recipientMobile: payload.recipientMobile,
         recipientType: payload.recipientType,
         messageBody: payload.message,
-        gatewayName: 'PHILSMS',
+        gatewayName,
         gatewayMessageId: null,
         status: 'FAILED',
         errorReason: errorMsg,

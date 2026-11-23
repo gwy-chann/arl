@@ -17,6 +17,8 @@ export const createSmsDispatchLogSchema = z.object({
   status: smsDispatchStatusSchema,
   errorReason: z.string().nullable().optional(),
   latencyMs: z.number().int().nonnegative().nullable().optional(),
+  executionLatencyMs: z.number().int().nonnegative().nullable().optional(),
+  execution_latency_ms: z.number().int().nonnegative().nullable().optional(),
   dispatchedAt: z.string().datetime().optional(),
 });
 
@@ -34,6 +36,7 @@ export interface SmsDispatchLogDTO {
   status: SmsDispatchStatus;
   errorReason: string | null;
   latencyMs: number | null;
+  executionLatencyMs?: number | null;
   dispatchedAt: string;
   createdAt: string;
 
@@ -47,6 +50,7 @@ export interface SmsDispatchLogDTO {
   gateway_message_id?: string | null;
   error_reason?: string | null;
   latency_ms?: number | null;
+  execution_latency_ms?: number | null;
   dispatched_at?: string;
   created_at?: string;
 }
