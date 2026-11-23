@@ -14,6 +14,7 @@ import {
   type OverdueSweepSummary,
 } from './sms-contracts.ts';
 import { dispatchSmsSafe } from './sms-resilience.ts';
+import { resolveSmsGatewayProvider } from './sms-gateway-router.ts';
 import {
   recordSmsDispatchLog,
   _resetSmsAuditLogs,
@@ -104,12 +105,8 @@ export async function dispatchSms(
 ): Promise<SmsDispatchResult> {
   const norm = validateAndNormalizePhilippineMobile(payload.recipientMobile);
   const nowIso = new Date().toISOString();
-  const gatewayName = (
-    options?.gateway ||
-    process.env.SMS_GATEWAY_PROVIDER ||
-    process.env.ACTIVE_SMS_GATEWAY ||
-    'PHILSMS'
-  ).toUpperCase();
+  const resolvedProvider = resolveSmsGatewayProvider({ provider: options?.gateway });
+  const gatewayName = resolvedProvider.toUpperCase();
 
   if (!norm.isValid) {
     const errorMsg = norm.error || 'Invalid mobile number';

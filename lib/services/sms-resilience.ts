@@ -1,5 +1,4 @@
-import { sendSmsViaPhilSms } from './philsms-adapter.ts';
-import { sendSmsViaTextBee } from './textbee-adapter.ts';
+import { dispatchGatewaySms, type UnifiedSmsDispatchResult } from './sms-gateway-router.ts';
 import type { PhilSmsSendResult, PhilSmsErrorCode } from './philsms-contracts.ts';
 import type { TextBeeErrorCode, TextBeeSendResult } from './textbee-contracts.ts';
 import type { SmsDispatchPayload } from './sms-contracts.ts';
@@ -392,7 +391,7 @@ export async function dispatchSmsSafe(
   }
 
   let lastError: Error | null = null;
-  let lastResult: PhilSmsSendResult | TextBeeSendResult | null = null;
+  let lastResult: UnifiedSmsDispatchResult | PhilSmsSendResult | TextBeeSendResult | null = null;
   const maxRetries = cfg.maxRetries ?? 1;
   const timeoutMs = cfg.timeoutMs ?? 5000;
   let attemptsMade = 0;
@@ -403,17 +402,11 @@ export async function dispatchSmsSafe(
     try {
       const result = await executeWithTimeout(
         async (signal) => {
-          if (targetGateway === 'TEXTBEE') {
-            return sendSmsViaTextBee({
-              recipient: payload.recipientMobile,
-              message: payload.message,
-              signal,
-            });
-          }
-          return sendSmsViaPhilSms({
+          return dispatchGatewaySms({
             recipient: payload.recipientMobile,
             message: payload.message,
             signal,
+            provider: targetGateway,
           });
         },
         timeoutMs
