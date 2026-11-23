@@ -1,10 +1,20 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
-import { getPhilSmsBalance } from '@/lib/services/philsms-balance-service';
-import type { PhilSmsAccountStatus } from '@/lib/services/philsms-contracts';
-import { getTextBeeDeviceHealth } from '@/lib/services/textbee-health-service';
-import type { TextBeeDeviceHealth } from '@/lib/services/textbee-contracts';
+import { getPhilSmsBalance } from '../../../../lib/services/philsms-balance-service.ts';
+import type { PhilSmsAccountStatus } from '../../../../lib/services/philsms-contracts.ts';
+import { getTextBeeDeviceHealth } from '../../../../lib/services/textbee-health-service.ts';
+import type { TextBeeDeviceHealth } from '../../../../lib/services/textbee-contracts.ts';
+
+async function safeRevalidatePath(path: string) {
+  try {
+    const cacheModule = await import('next/cache');
+    if (typeof cacheModule.revalidatePath === 'function') {
+      cacheModule.revalidatePath(path);
+    }
+  } catch {
+    // Silently continue in environments where next/cache is not available (e.g., node:test runner)
+  }
+}
 
 export interface PhilSmsAccountStatusActionResult {
   success: boolean;
@@ -54,7 +64,7 @@ export async function refreshPhilSmsBalanceAction(options?: {
 }): Promise<PhilSmsAccountStatusActionResult> {
   try {
     const status = await getPhilSmsBalance({ forceRefresh: options?.forceRefresh ?? true });
-    revalidatePath('/settings/reminders');
+    await safeRevalidatePath('/settings/reminders');
     return {
       success: status.success,
       data: status,
@@ -97,7 +107,7 @@ export async function refreshTextBeeDeviceHealthAction(options?: {
 }): Promise<TextBeeDeviceHealthActionResult> {
   try {
     const health = await getTextBeeDeviceHealth({ forceRefresh: options?.forceRefresh ?? true });
-    revalidatePath('/settings/reminders');
+    await safeRevalidatePath('/settings/reminders');
     return {
       success: health.success,
       data: health,
@@ -126,7 +136,7 @@ export async function getSmsGatewayStatusAction(options?: {
     ]);
 
     if (force) {
-      revalidatePath('/settings/reminders');
+      await safeRevalidatePath('/settings/reminders');
     }
 
     return {
