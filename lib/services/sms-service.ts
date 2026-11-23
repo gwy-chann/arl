@@ -90,7 +90,7 @@ export function _getDispatchedSmsHistory(): SmsDispatchPayload[] {
 }
 
 export interface DispatchSmsOptions {
-  gateway?: 'PHILSMS' | 'TEXTBEE' | string;
+  gateway?: 'TEXTBEE' | 'MOCK' | string;
 }
 
 /**
@@ -306,7 +306,7 @@ export async function sendManualCustomerSmsNudge(
         recipientMobile: targetCustomer.phone || 'N/A',
         recipientType: 'CUSTOMER',
         messageBody: `[SKIPPED] Manual collection nudge for ${targetCustomer.name}`,
-        gatewayName: 'PHILSMS',
+        gatewayName: 'TEXTBEE',
         gatewayMessageId: null,
         status: 'SKIPPED',
         errorReason: 'Customer phone number missing or invalid',
@@ -431,7 +431,7 @@ export async function dispatchOverdueBalanceReminders(options?: {
           recipientMobile: sale.customer_phone || settings.admin_mobile || '0917 555 0142',
           recipientType: 'CUSTOMER',
           messageBody: `[SKIPPED] Overdue balance reminder for receipt ${sale.receipt_number}`,
-          gatewayName: 'PHILSMS',
+          gatewayName: 'TEXTBEE',
           gatewayMessageId: null,
           status: 'SKIPPED',
           errorReason: 'Dispatched within last 24h cooldown',
@@ -527,7 +527,7 @@ export async function dispatchOverdueBalanceReminders(options?: {
               receiptNumber: sale.receipt_number,
               reminderDays,
             }),
-            gatewayName: 'PHILSMS',
+            gatewayName: 'TEXTBEE',
             gatewayMessageId: null,
             status: 'SKIPPED',
             errorReason: 'Customer phone number missing',

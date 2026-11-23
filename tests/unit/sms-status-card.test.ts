@@ -4,8 +4,6 @@ import {
   getTextBeeDeviceHealthAction,
   refreshTextBeeDeviceHealthAction,
   getSmsGatewayStatusAction,
-  getPhilSmsAccountStatusAction,
-  refreshPhilSmsBalanceAction,
 } from '../../app/(admin)/settings/reminders/actions.ts';
 import {
   formatBatteryLabel,
@@ -13,12 +11,7 @@ import {
   _resetTextBeeHealthCache,
   _setTestTextBeeHealthOverride,
 } from '../../lib/services/textbee-health-service.ts';
-import {
-  _resetPhilSmsBalanceCache,
-  _setTestPhilSmsBalanceOverride,
-} from '../../lib/services/philsms-balance-service.ts';
 import type { TextBeeDeviceHealth } from '../../lib/services/textbee-contracts.ts';
-import type { PhilSmsAccountStatus } from '../../lib/services/philsms-contracts.ts';
 
 describe('Unit & Component Contract: SmsGatewayStatusCard & Server Actions (ARL-43)', () => {
   const originalEnv = { ...process.env };
@@ -26,13 +19,11 @@ describe('Unit & Component Contract: SmsGatewayStatusCard & Server Actions (ARL-
   beforeEach(() => {
     process.env = { ...originalEnv };
     _resetTextBeeHealthCache();
-    _resetPhilSmsBalanceCache();
   });
 
   afterEach(() => {
     process.env = { ...originalEnv };
     _resetTextBeeHealthCache();
-    _resetPhilSmsBalanceCache();
   });
 
   describe('1. Server Actions Execution & Response Contracts', () => {
@@ -73,18 +64,7 @@ describe('Unit & Component Contract: SmsGatewayStatusCard & Server Actions (ARL-
       assert.strictEqual(result.data.batteryPercentage, 92);
     });
 
-    it('getSmsGatewayStatusAction aggregates both PhilSMS and TextBee diagnostics', async () => {
-      const mockPhil: PhilSmsAccountStatus = {
-        success: true,
-        balance: 250,
-        currency: 'PHP',
-        senderId: 'ARLQ',
-        isMock: true,
-        cached: false,
-        warningLevel: 'healthy',
-        statusText: 'Connected (PhilSMS Gateway)',
-      };
-
+    it('getSmsGatewayStatusAction returns TextBee device diagnostic', async () => {
       const mockTextBee: TextBeeDeviceHealth = {
         success: true,
         deviceId: 'device_primary',
@@ -100,20 +80,11 @@ describe('Unit & Component Contract: SmsGatewayStatusCard & Server Actions (ARL-
         cached: false,
       };
 
-      _setTestPhilSmsBalanceOverride(mockPhil);
       _setTestTextBeeHealthOverride(mockTextBee);
-
-      const philRes = await getPhilSmsAccountStatusAction();
-      assert.strictEqual(philRes.success, true);
-      assert.strictEqual(philRes.data?.balance, 250);
-
-      const philRefresh = await refreshPhilSmsBalanceAction({ forceRefresh: true });
-      assert.strictEqual(philRefresh.success, true);
 
       const result = await getSmsGatewayStatusAction();
       assert.strictEqual(result.success, true);
-      assert.strictEqual(result.activeGateway, 'DUAL');
-      assert.strictEqual(result.philsms?.balance, 250);
+      assert.strictEqual(result.activeGateway, 'TEXTBEE');
       assert.strictEqual(result.textbee?.batteryPercentage, 78);
     });
   });

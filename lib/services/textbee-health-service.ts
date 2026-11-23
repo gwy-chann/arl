@@ -150,18 +150,17 @@ export async function getTextBeeDeviceHealth(
     return { ...testOverrideHealth };
   }
 
-  const apiKey = process.env.TEXTBEE_API_KEY?.trim();
+  const apiKey = (options?.apiKey || process.env.TEXTBEE_API_KEY || '').trim();
   const configuredDeviceId = (
-    process.env.TEXTBEE_DEVICE_ID || 'device_arlq_primary'
+    options?.deviceId || process.env.TEXTBEE_DEVICE_ID || 'device_arlq_primary'
   ).trim();
   const configuredDeviceName = (
-    process.env.TEXTBEE_DEVICE_NAME || TEXTBEE_DEFAULT_DEVICE_NAME
+    options?.deviceName || process.env.TEXTBEE_DEVICE_NAME || TEXTBEE_DEFAULT_DEVICE_NAME
   ).trim();
 
   const isMock =
     process.env.TEXTBEE_MOCK_HEALTH === 'true' ||
-    process.env.TEXTBEE_MOCK_DISPATCH === 'true' ||
-    !apiKey;
+    (process.env.TEXTBEE_MOCK_HEALTH !== 'false' && (process.env.TEXTBEE_MOCK_DISPATCH === 'true' || !apiKey));
 
   // 1. Offline mock mode handling
   if (isMock) {
@@ -196,25 +195,45 @@ export async function getTextBeeDeviceHealth(
 
   // 3. Live API request
   const baseUrl = (
+    options?.baseUrl ||
     process.env.TEXTBEE_API_URL ||
     process.env.TEXTBEE_BASE_URL ||
     TEXTBEE_DEFAULT_BASE_URL
   ).replace(/\/+$/, '');
-  const url = `${baseUrl}/devices/${configuredDeviceId}`;
+  const gatewayUrl = `${baseUrl}${baseUrl.endsWith('/gateway') ? '' : '/gateway'}/devices/${encodeURIComponent(configuredDeviceId)}`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   try {
-    const response = await fetch(url, {
+    let response = await fetch(gatewayUrl, {
       method: 'GET',
       headers: {
         'x-api-key': apiKey,
-        Authorization: `Bearer ${apiKey}`,
         Accept: 'application/json',
       },
       signal: controller.signal,
     });
+
+    // Fallback attempt to /devices/:id if /gateway/devices/:id returned 404
+    if (response.status === 404 && !baseUrl.endsWith('/gateway')) {
+      const fallbackUrl = `${baseUrl}/devices/${encodeURIComponent(configuredDeviceId)}`;
+      try {
+        const fallbackRes = await fetch(fallbackUrl, {
+          method: 'GET',
+          headers: {
+            'x-api-key': apiKey,
+            Accept: 'application/json',
+          },
+          signal: controller.signal,
+        });
+        if (fallbackRes.ok) {
+          response = fallbackRes;
+        }
+      } catch {
+        // Retain original 404 response
+      }
+    }
 
     clearTimeout(timeoutId);
 
@@ -286,7 +305,21 @@ export async function getTextBeeDeviceHealth(
     }
 
     // 3d. Parse and normalize live device payload
-    const rawData = (await response.json()) as TextBeeRawDeviceApiResponse;
+    const jsonBody = await response.json();
+    let rawData: TextBeeRawDeviceApiResponse;
+    if (jsonBody && typeof jsonBody === 'object') {
+      if (Array.isArray(jsonBody.data)) {
+        rawData = ((jsonBody.data as TextBeeRawDeviceApiResponse[]).find(
+          (d) => d && (d._id === configuredDeviceId || d.id === configuredDeviceId)
+        ) ?? jsonBody.data[0] ?? {}) as TextBeeRawDeviceApiResponse;
+      } else if ('data' in jsonBody && jsonBody.data && typeof jsonBody.data === 'object') {
+        rawData = jsonBody.data as TextBeeRawDeviceApiResponse;
+      } else {
+        rawData = jsonBody as TextBeeRawDeviceApiResponse;
+      }
+    } else {
+      rawData = {} as TextBeeRawDeviceApiResponse;
+    }
     const deviceName = rawData.name || configuredDeviceName;
     const deviceModel = rawData.model;
 
@@ -294,6 +327,8 @@ export async function getTextBeeDeviceHealth(
     let isOnline = false;
     if (typeof rawData.online === 'boolean') {
       isOnline = rawData.online;
+    } else if (typeof rawData.enabled === 'boolean') {
+      isOnline = rawData.enabled;
     } else if (typeof rawData.status === 'string') {
       isOnline = rawData.status.toUpperCase() === 'ONLINE' || rawData.status.toUpperCase() === 'CONNECTED';
     }
@@ -301,7 +336,12 @@ export async function getTextBeeDeviceHealth(
     // Normalize battery
     let batteryPercentage = 100;
     let isCharging = false;
-    if (typeof rawData.battery === 'number') {
+    if (rawData.batteryInfo && typeof rawData.batteryInfo === 'object') {
+      if (typeof rawData.batteryInfo.percentage === 'number') {
+        batteryPercentage = Math.max(0, Math.min(100, rawData.batteryInfo.percentage));
+      }
+      isCharging = Boolean(rawData.batteryInfo.isCharging);
+    } else if (typeof rawData.battery === 'number') {
       batteryPercentage = Math.max(0, Math.min(100, rawData.battery));
     } else if (typeof rawData.battery === 'object' && rawData.battery !== null) {
       const bObj = rawData.battery;
@@ -316,7 +356,9 @@ export async function getTextBeeDeviceHealth(
     // Normalize network
     let rawNetworkType: string | undefined;
     let signalStrength: number | undefined;
-    if (typeof rawData.network === 'string') {
+    if (rawData.networkInfo && typeof rawData.networkInfo === 'object') {
+      rawNetworkType = rawData.networkInfo.networkType;
+    } else if (typeof rawData.network === 'string') {
       rawNetworkType = rawData.network;
     } else if (typeof rawData.network === 'object' && rawData.network !== null) {
       rawNetworkType = rawData.network.type;
@@ -326,7 +368,22 @@ export async function getTextBeeDeviceHealth(
     }
     const networkType = normalizeNetworkType(rawNetworkType);
 
-    const lastSeenAt = rawData.lastSeen || rawData.updatedAt || new Date(now).toISOString();
+    if (signalStrength === undefined) {
+      const sims = rawData.simInfo?.sims;
+      if (Array.isArray(sims) && sims.length > 0 && typeof sims[0]?.signalLevel === 'number') {
+        signalStrength = sims[0].signalLevel;
+      } else if (typeof rawData.signalStrength === 'number') {
+        signalStrength = rawData.signalStrength;
+      }
+    }
+
+    const lastSeenAt =
+      rawData.lastHeartbeat ||
+      rawData.batteryInfo?.lastUpdated ||
+      rawData.networkInfo?.lastUpdated ||
+      rawData.lastSeen ||
+      rawData.updatedAt ||
+      new Date(now).toISOString();
 
     const evaluation = evaluateDeviceHealthLevel({
       isOnline,

@@ -1,14 +1,13 @@
-import { sendSmsViaPhilSms } from './philsms-adapter.ts';
 import { sendSmsViaTextBee } from './textbee-adapter.ts';
 
-export type SmsGatewayProvider = 'textbee' | 'philsms' | 'mock';
+export type SmsGatewayProvider = 'textbee' | 'mock';
 
 export interface UnifiedSmsDispatchOptions {
   /** Target mobile number in Philippine format (e.g. '09171234567' or '+639171234567') */
   recipient: string;
   /** SMS message content */
   message: string;
-  /** Optional custom sender ID (supported on PhilSMS) */
+  /** Optional custom sender ID */
   senderId?: string;
   /** Optional AbortSignal for enforcing timeout deadlines */
   signal?: AbortSignal;
@@ -56,17 +55,15 @@ export function normalizeProviderName(raw?: string | null): SmsGatewayProvider |
   if (!raw) return null;
   const cleaned = raw.trim().toLowerCase();
   if (cleaned === 'textbee') return 'textbee';
-  if (cleaned === 'philsms') return 'philsms';
   if (cleaned === 'mock') return 'mock';
   return null;
 }
 
 /**
- * Resolves the active SMS gateway provider following the strict resolution hierarchy:
+ * Resolves the active SMS gateway provider following the resolution hierarchy:
  * 1. Explicit provider passed in options
  * 2. Explicit SMS_GATEWAY_PROVIDER or ACTIVE_SMS_GATEWAY environment variable
- * 3. Smart Auto-Detection: Defaults to 'textbee' if TEXTBEE_API_KEY is present
- * 4. Fallback Default: 'philsms'
+ * 3. Default: 'textbee'
  */
 export function resolveSmsGatewayProvider(
   options?: { provider?: SmsGatewayProvider | string }
@@ -84,19 +81,13 @@ export function resolveSmsGatewayProvider(
     if (fromEnv) return fromEnv;
   }
 
-  // 3. Smart Auto-Detection: if TextBee API key is present, default to textbee
-  const textbeeKey = process.env.TEXTBEE_API_KEY;
-  if (textbeeKey && textbeeKey.trim() !== '') {
-    return 'textbee';
-  }
-
-  // 4. Default fallback
-  return 'philsms';
+  // 3. Default
+  return 'textbee';
 }
 
 /**
  * Unified SMS Gateway Dispatcher.
- * Routes outbound SMS dispatches to the active provider (TextBee, PhilSMS, or mock)
+ * Routes outbound SMS dispatches to TextBee or mock fallback
  * and returns a normalized UnifiedSmsDispatchResult.
  */
 export async function dispatchGatewaySms(
@@ -122,37 +113,18 @@ export async function dispatchGatewaySms(
     };
   }
 
-  if (provider === 'textbee') {
-    const textBeeRes = await sendSmsViaTextBee({
-      recipient: options.recipient,
-      message: options.message,
-      signal: options.signal,
-    });
-
-    return {
-      success: textBeeRes.success,
-      messageId: textBeeRes.messageId,
-      provider: 'textbee',
-      errorMessage: textBeeRes.errorMessage,
-      errorCode: textBeeRes.errorCode,
-      rawResponse: textBeeRes.rawResponse,
-    };
-  }
-
-  // Provider: 'philsms'
-  const philSmsRes = await sendSmsViaPhilSms({
+  const textBeeRes = await sendSmsViaTextBee({
     recipient: options.recipient,
     message: options.message,
-    senderId: options.senderId,
     signal: options.signal,
   });
 
   return {
-    success: philSmsRes.success,
-    messageId: philSmsRes.messageId,
-    provider: 'philsms',
-    errorMessage: philSmsRes.errorMessage,
-    errorCode: philSmsRes.errorCode,
-    rawResponse: philSmsRes.rawResponse,
+    success: textBeeRes.success,
+    messageId: textBeeRes.messageId,
+    provider: 'textbee',
+    errorMessage: textBeeRes.errorMessage,
+    errorCode: textBeeRes.errorCode,
+    rawResponse: textBeeRes.rawResponse,
   };
 }
