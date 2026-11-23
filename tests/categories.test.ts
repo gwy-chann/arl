@@ -185,5 +185,28 @@ describe('Product Category Management & Cascade Validation (ARL-7)', () => {
         false
       );
     });
+
+    test('allows re-creating a category with the same name after it has been deleted', async () => {
+      // 1. Soy Sauce exists initially
+      const initialList = await getCategories();
+      const soySauce = initialList.find((c) => c.name === 'Soy Sauce');
+      assert.ok(soySauce);
+
+      // 2. Delete Soy Sauce
+      const deleteResult = await deleteCategory(soySauce!.id);
+      assert.strictEqual(deleteResult.success, true);
+
+      // 3. Re-create category with the exact same name "Soy Sauce"
+      const recreated = await createCategory({ name: 'Soy Sauce' });
+      assert.ok(recreated.id);
+      assert.strictEqual(recreated.name, 'Soy Sauce');
+      assert.strictEqual(recreated.product_count, 0);
+
+      // 4. Verify recreated category exists in store
+      const listAfter = await getCategories();
+      const found = listAfter.find((c) => c.name === 'Soy Sauce');
+      assert.ok(found);
+      assert.strictEqual(found!.id, recreated.id);
+    });
   });
 });

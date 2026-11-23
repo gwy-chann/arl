@@ -49,6 +49,7 @@ export async function createCategoryAction(name: string): Promise<{
     }
 
     const category = await createCategory({ name }, supabase);
+    revalidatePath('/products');
     revalidatePath('/products/categories');
     return { success: true, category };
   } catch (err: unknown) {
@@ -76,6 +77,7 @@ export async function renameCategoryAction(
     }
 
     const category = await renameCategory({ id, name }, supabase);
+    revalidatePath('/products');
     revalidatePath('/products/categories');
     return { success: true, category };
   } catch (err: unknown) {
@@ -98,6 +100,7 @@ export async function deleteCategoryAction(
     }
 
     const result = await deleteCategory(id, supabase);
+    revalidatePath('/products');
     revalidatePath('/products/categories');
     return result;
   } catch (err: unknown) {

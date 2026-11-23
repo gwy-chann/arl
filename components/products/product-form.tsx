@@ -24,7 +24,7 @@ interface CategoryOption {
 }
 
 interface ProductFormProps {
-  initialProduct?: ProductWithVariants | null;
+  initialProduct?: ProductWithVariants | null; 
   categories: CategoryOption[];
 }
 
@@ -74,6 +74,7 @@ export function ProductForm({
 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Category Modal state
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   const updateVariantField = (
@@ -136,7 +137,7 @@ export function ProductForm({
     try {
       // In Add mode, filter out completely unconfigured/empty starter rows
       const submittedRows = variants.filter((v) => {
-        if (isEdit && v.id) return true;
+        if (isEdit && Boolean(v.id)) return true;
         const hasCost = Boolean(v.cost_price?.trim());
         const hasPrice = Boolean(v.selling_price?.trim());
         const hasSize = Boolean(

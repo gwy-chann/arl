@@ -9,10 +9,9 @@ import type {
 
 import {
   validateCategoryName,
-  
 } from '../../specs/005-product-category-management/contracts/category-contracts.ts';
 
-export { validateCategoryName,  };
+export { validateCategoryName };
 export type {
   Category,
   CategoryWithProductCount,
@@ -107,13 +106,23 @@ export async function getCategories(
         .order('name', { ascending: true });
 
       if (!error && Array.isArray(data)) {
-        return (data as unknown as SupabaseCategoryRow[]).map((row) => ({
+        const categoriesResult = (data as unknown as SupabaseCategoryRow[]).map((row) => ({
           id: row.id,
           name: row.name,
           created_at: row.created_at,
           updated_at: row.updated_at,
           product_count: Array.isArray(row.products) ? row.products.length : 0,
         }));
+
+        // Synchronize in-memory categories with live Supabase database
+        inMemoryCategories = categoriesResult.map((c) => ({
+          id: c.id,
+          name: c.name,
+          created_at: c.created_at,
+          updated_at: c.updated_at,
+        }));
+
+        return categoriesResult;
       }
       return [];
     } catch {
@@ -145,15 +154,18 @@ export async function createCategory(
 
   const trimmedName = validation.name;
 
-  // Check uniqueness (case-insensitive)
-  const existing = inMemoryCategories.some(
-    (c) => c.name.toLowerCase() === trimmedName.toLowerCase()
-  );
-  if (existing) {
-    throw new Error(`Category "${trimmedName}" already exists.`);
-  }
-
   if (supabaseClient) {
+    // 1. Check live database if category already exists (case-insensitive)
+    const { data: existingSupabase } = await supabaseClient
+      .from('categories')
+      .select('id, name')
+      .ilike('name', trimmedName)
+      .maybeSingle();
+
+    if (existingSupabase) {
+      throw new Error(`Category "${trimmedName}" already exists.`);
+    }
+
     try {
       const { data, error } = await supabaseClient
         .from('categories')
@@ -162,6 +174,26 @@ export async function createCategory(
         .single();
 
       if (!error && data) {
+        // Sync in-memory store
+        const existingIdx = inMemoryCategories.findIndex(
+          (c) => c.name.toLowerCase() === trimmedName.toLowerCase() || c.id === data.id
+        );
+        if (existingIdx !== -1) {
+          inMemoryCategories[existingIdx] = {
+            id: data.id,
+            name: data.name,
+            created_at: data.created_at,
+            updated_at: data.updated_at,
+          };
+        } else {
+          inMemoryCategories.push({
+            id: data.id,
+            name: data.name,
+            created_at: data.created_at,
+            updated_at: data.updated_at,
+          });
+        }
+
         return {
           id: data.id,
           name: data.name,
@@ -170,9 +202,27 @@ export async function createCategory(
           product_count: 0,
         };
       }
-    } catch {
-      // Fallback to in-memory store
+
+      if (error) {
+        if (error.code === '23505' || error.message.includes('unique')) {
+          throw new Error(`Category "${trimmedName}" already exists.`);
+        }
+        throw new Error(error.message);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('already exists')) {
+        throw err;
+      }
+      // Fallback to in-memory store on connection failure
     }
+  }
+
+  // Fallback to in-memory store (checked ONLY against active inMemoryCategories)
+  const existing = inMemoryCategories.some(
+    (c) => c.name.toLowerCase() === trimmedName.toLowerCase()
+  );
+  if (existing) {
+    throw new Error(`Category "${trimmedName}" already exists.`);
   }
 
   const newCategory: Category = {
@@ -204,16 +254,20 @@ export async function renameCategory(
 
   const trimmedName = validation.name;
 
-  // Check duplicate with another category
-  const duplicate = inMemoryCategories.some(
-    (c) => c.id !== input.id && c.name.toLowerCase() === trimmedName.toLowerCase()
-  );
-  if (duplicate) {
-    throw new Error(`Category "${trimmedName}" already exists.`);
-  }
-
   if (supabaseClient) {
     try {
+      // Check duplicate in Supabase (case-insensitive with different id)
+      const { data: existingSupabase } = await supabaseClient
+        .from('categories')
+        .select('id, name')
+        .ilike('name', trimmedName)
+        .neq('id', input.id)
+        .maybeSingle();
+
+      if (existingSupabase) {
+        throw new Error(`Category "${trimmedName}" already exists.`);
+      }
+
       const { data, error } = await supabaseClient
         .from('categories')
         .update({ name: trimmedName, updated_at: new Date().toISOString() })
@@ -222,6 +276,12 @@ export async function renameCategory(
         .single();
 
       if (!error && data) {
+        const memIdx = inMemoryCategories.findIndex((c) => c.id === input.id);
+        if (memIdx !== -1) {
+          inMemoryCategories[memIdx].name = trimmedName;
+          inMemoryCategories[memIdx].updated_at = data.updated_at;
+        }
+
         const product_count = inMemoryProducts.filter((p) => p.category_id === input.id).length;
         return {
           id: data.id,
@@ -231,9 +291,27 @@ export async function renameCategory(
           product_count,
         };
       }
-    } catch {
+
+      if (error) {
+        if (error.code === '23505' || error.message.includes('unique')) {
+          throw new Error(`Category "${trimmedName}" already exists.`);
+        }
+        throw new Error(error.message);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('already exists')) {
+        throw err;
+      }
       // Fallback to in-memory store
     }
+  }
+
+  // Check duplicate with another category in-memory
+  const duplicate = inMemoryCategories.some(
+    (c) => c.id !== input.id && c.name.toLowerCase() === trimmedName.toLowerCase()
+  );
+  if (duplicate) {
+    throw new Error(`Category "${trimmedName}" already exists.`);
   }
 
   const category = inMemoryCategories.find((c) => c.id === input.id);
@@ -258,28 +336,77 @@ export async function deleteCategory(
   id: string,
   supabaseClient?: SupabaseClient | null
 ): Promise<DeleteCategoryResult> {
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  let deletedCategoryName: string | null = null;
+
+  const memCat = inMemoryCategories.find((c) => c.id === id);
+  if (memCat) {
+    deletedCategoryName = memCat.name;
+  }
+
   if (supabaseClient) {
     try {
-      // Unlink products first (or let FK ON DELETE SET NULL handle it)
-      await supabaseClient
-        .from('products')
-        .update({ category_id: null })
-        .eq('category_id', id);
-
-      const { error } = await supabaseClient
-        .from('categories')
-        .delete()
-        .eq('id', id);
-
-      if (!error) {
-        return { success: true, deletedId: id, orphanedProductCount: 0 };
+      let targetId = id;
+      if (isUuid) {
+        const { data: dbCat } = await supabaseClient
+          .from('categories')
+          .select('id, name')
+          .eq('id', id)
+          .maybeSingle();
+        if (dbCat) {
+          deletedCategoryName = dbCat.name;
+        }
+      } else if (deletedCategoryName) {
+        const { data: dbCat } = await supabaseClient
+          .from('categories')
+          .select('id, name')
+          .ilike('name', deletedCategoryName)
+          .maybeSingle();
+        if (dbCat) {
+          targetId = dbCat.id;
+        }
       }
+
+      const targetIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
+      if (targetIsUuid) {
+        // Unlink products first (or let FK ON DELETE SET NULL handle it)
+        await supabaseClient
+          .from('products')
+          .update({ category_id: null })
+          .eq('category_id', targetId);
+
+        const { error } = await supabaseClient
+          .from('categories')
+          .delete()
+          .eq('id', targetId);
+
+        if (error) {
+          console.error('Failed to delete category in Supabase:', error);
+        }
+      }
+
+      // Completely remove deleted category from in-memory store so it never blocks re-creating it
+      inMemoryCategories = inMemoryCategories.filter(
+        (c) =>
+          c.id !== id &&
+          c.id !== targetId &&
+          (!deletedCategoryName || c.name.toLowerCase() !== deletedCategoryName.toLowerCase())
+      );
+      inMemoryProducts = inMemoryProducts.map((p) =>
+        p.category_id === id || p.category_id === targetId ? { ...p, category_id: null } : p
+      );
+
+      return { success: true, deletedId: id, orphanedProductCount: 0 };
     } catch {
       // Fallback to in-memory store
     }
   }
 
-  const categoryIndex = inMemoryCategories.findIndex((c) => c.id === id);
+  const categoryIndex = inMemoryCategories.findIndex(
+    (c) =>
+      c.id === id ||
+      (deletedCategoryName && c.name.toLowerCase() === deletedCategoryName.toLowerCase())
+  );
   if (categoryIndex === -1) {
     return { success: false, deletedId: id, orphanedProductCount: 0, error: 'Category not found' };
   }
@@ -292,7 +419,7 @@ export async function deleteCategory(
     p.category_id === id ? { ...p, category_id: null } : p
   );
 
-  // Remove category
+  // Remove category completely from in-memory store
   inMemoryCategories.splice(categoryIndex, 1);
 
   return {
@@ -301,4 +428,5 @@ export async function deleteCategory(
     orphanedProductCount: linkedCount,
   };
 }
-export {getDeleteCategoryPrompt} from '../../specs/005-product-category-management/contracts/category-contracts.ts';
+
+export { getDeleteCategoryPrompt } from '../../specs/005-product-category-management/contracts/category-contracts.ts';

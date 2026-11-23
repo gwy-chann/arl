@@ -138,10 +138,10 @@ export function PlaceholderPage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href="/products/categories"
+            href="/products"
             className="text-xs font-semibold text-text-secondary hover:text-text-primary px-3 py-1.5 rounded-md border border-border hover:bg-bg-muted transition-colors"
           >
-            Product Categories
+            Product Catalog
           </Link>
           <Link
             href="/settings/appearance"
