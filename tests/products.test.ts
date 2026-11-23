@@ -221,6 +221,51 @@ describe('Feature ARL-8: Multi-Variant Product Catalog & Pricing Engine', () => 
       assert.equal(remainingProducts.length, 2, 'Only 2 products remain');
       assert.equal(remainingProducts.some((p) => p.name === 'Patis'), false);
     });
+
+    test('cleans up referencing records in stock_movements and sale_items when deleting via Supabase', async () => {
+      const deletedTables: string[] = [];
+      const mockSupabase = {
+        from(tableName: string) {
+          return {
+            select() {
+              return {
+                eq() {
+                  const result = {
+                    data: [{ id: 'var-1' }, { id: 'var-2' }],
+                    error: null,
+                  };
+                  return {
+                    ...result,
+                    then: (fn: (v: typeof result) => unknown) => Promise.resolve(result).then(fn),
+                    maybeSingle: () => Promise.resolve({ data: { id: '00000000-0000-0000-0000-000000000001', name: 'Mock Prod' }, error: null }),
+                  };
+                },
+              };
+            },
+            delete() {
+              deletedTables.push(tableName);
+              return {
+                in() {
+                  return Promise.resolve({ error: null });
+                },
+                eq() {
+                  return Promise.resolve({ error: null });
+                },
+              };
+            },
+          };
+        },
+      } as unknown as import('@supabase/supabase-js').SupabaseClient;
+
+      const service = new ProductService(mockSupabase);
+      const uuid = '00000000-0000-0000-0000-000000000001';
+      const result = await service.deleteProduct(uuid);
+      assert.equal(result.success, true);
+      assert.ok(deletedTables.includes('stock_movements'), 'Must clean up stock_movements');
+      assert.ok(deletedTables.includes('sale_items'), 'Must clean up sale_items');
+      assert.ok(deletedTables.includes('product_variants'), 'Must clean up product_variants');
+      assert.ok(deletedTables.includes('products'), 'Must clean up products');
+    });
   });
 
   describe('Product Updates and Formatting', () => {
@@ -259,6 +304,29 @@ describe('Feature ARL-8: Multi-Variant Product Catalog & Pricing Engine', () => 
       assert.equal(getSizeLabel('350'), '350 ml');
       assert.equal(getSizeLabel('1L'), '1 L');
       assert.equal(getSizeLabel('gal'), '1 gal');
+    });
+
+    test('supports unlinked/uncategorized products after category deletion', async () => {
+      const service = new ProductService();
+      const products = await service.getProducts();
+      assert.ok(products.length > 0);
+
+      // Verify products handle null category gracefully
+      const uncategorizedProduct = await service.createProduct({
+        name: 'Special Chili Garlic Oil',
+        category_id: null,
+        variants: [
+          { size: '350', cost_price: 30, selling_price: 50, min_stock_level: 10 },
+        ],
+      });
+
+      assert.equal(uncategorizedProduct.category_id, null);
+      assert.equal(uncategorizedProduct.category_name, null);
+
+      const all = await service.getProducts();
+      const found = all.find((p) => p.id === uncategorizedProduct.id);
+      assert.ok(found);
+      assert.equal(found.category_name, null);
     });
   });
 });

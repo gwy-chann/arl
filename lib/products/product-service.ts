@@ -57,6 +57,12 @@ interface SupabaseProductRow {
 }
 
 // In-memory baseline store matching ARLQ domain model
+const DEFAULT_CATEGORY_NAMES: Record<string, string> = {
+  'cat-1': 'Soy Sauce',
+  'cat-2': 'Vinegar',
+  'cat-3': 'Fish Sauce',
+};
+
 const INITIAL_PRODUCTS: ProductWithVariants[] = [
   {
     id: 'prod-toyo',
@@ -355,6 +361,56 @@ export class ProductService {
   }
 
   /**
+   * Resolves a category ID to a valid database UUID or null.
+   * If a non-UUID mock ID is passed (e.g. 'cat-1', 'cat-2', 'cat-3'),
+   * it looks up or creates the corresponding category in Supabase.
+   */
+  private async resolveCategoryId(categoryId?: string | null): Promise<string | null> {
+    if (!categoryId || !categoryId.trim()) return null;
+    const trimmed = categoryId.trim();
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
+    if (isUuid) {
+      if (!this.supabase) return trimmed;
+      const { data } = await this.supabase
+        .from('categories')
+        .select('id')
+        .eq('id', trimmed)
+        .maybeSingle();
+      return data ? data.id : null;
+    }
+
+    if (!this.supabase) {
+      return trimmed;
+    }
+
+    const mappedName = DEFAULT_CATEGORY_NAMES[trimmed];
+    if (mappedName) {
+      const { data: existingCat } = await this.supabase
+        .from('categories')
+        .select('id')
+        .ilike('name', mappedName)
+        .maybeSingle();
+
+      if (existingCat) {
+        return existingCat.id;
+      }
+
+      const { data: createdCat } = await this.supabase
+        .from('categories')
+        .insert({ name: mappedName })
+        .select('id')
+        .single();
+
+      if (createdCat) {
+        return createdCat.id;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Retrieves a product by name (case-insensitive).
    */
   async getProductByName(name: string): Promise<ProductWithVariants | null> {
@@ -375,19 +431,12 @@ export class ProductService {
         .maybeSingle();
 
       if (error || !data) {
-        return (
-          inMemoryProducts.find(
-            (p) => p.name.trim().toLowerCase() === trimmed
-          ) || null
-        );
+        return null;
       }
 
       return await this.getProductById(data.id);
     } catch {
-      return (
-        inMemoryProducts.find((p) => p.name.trim().toLowerCase() === trimmed) ||
-        null
-      );
+      return null;
     }
   }
 
@@ -462,13 +511,15 @@ export class ProductService {
       return newProduct;
     }
 
+    const resolvedCatId = await this.resolveCategoryId(validated.category_id);
+
     try {
       // 1. Insert product record
       const { data: prodData, error: prodError } = await this.supabase
         .from('products')
         .insert({
           name: validated.name,
-          category_id: validated.category_id || null,
+          category_id: resolvedCatId,
         })
         .select('id, name, category_id, created_at, updated_at')
         .single();
@@ -477,10 +528,10 @@ export class ProductService {
         throw new Error(prodError?.message || 'Failed to create product');
       }
 
-      // 2. Insert 3 variant records
+      // 2. Insert variant records
       const variantInserts = validated.variants.map((v) => ({
         product_id: prodData.id,
-        size: v.size,
+        size: v.size.trim(),
         cost_price: v.cost_price,
         selling_price: v.selling_price,
         stock_quantity: v.opening_stock ?? 0,
@@ -500,11 +551,21 @@ export class ProductService {
 
       const variants = (varData as unknown as SupabaseVariantRow[]).map(mapVariantRow);
 
+      let categoryName: string | null = null;
+      if (prodData.category_id) {
+        const { data: catData } = await this.supabase
+          .from('categories')
+          .select('name')
+          .eq('id', prodData.category_id)
+          .maybeSingle();
+        categoryName = catData?.name ?? null;
+      }
+
       const createdProduct: ProductWithVariants = {
         id: prodData.id,
         name: prodData.name,
         category_id: prodData.category_id,
-        category_name: null,
+        category_name: categoryName,
         variants: sortVariants(variants),
         created_at: prodData.created_at,
         updated_at: prodData.updated_at,
@@ -512,39 +573,9 @@ export class ProductService {
 
       inMemoryProducts.push(createdProduct);
       return createdProduct;
-    } catch {
-      // In-memory fallback if database transaction fails
-      const newId = `prod-${Date.now()}`;
-      const now = new Date().toISOString();
-      const variants: ProductVariantDTO[] = validated.variants.map((v) => {
-        const cost = Number(v.cost_price);
-        const price = Number(v.selling_price);
-        return {
-          id: `var-${newId}-${v.size}`,
-          product_id: newId,
-          size: v.size as ProductSizeKey,
-          cost_price: cost,
-          selling_price: price,
-          unit_profit: computeUnitProfit(price, cost),
-          stock_quantity: v.opening_stock ?? 0,
-          min_stock_level: v.min_stock_level ?? 0,
-          created_at: now,
-          updated_at: now,
-        };
-      });
-
-      const fallbackProduct: ProductWithVariants = {
-        id: newId,
-        name: validated.name,
-        category_id: validated.category_id ?? null,
-        category_name: null,
-        variants: sortVariants(variants),
-        created_at: now,
-        updated_at: now,
-      };
-
-      inMemoryProducts.push(fallbackProduct);
-      return fallbackProduct;
+    } catch (err) {
+      console.error('Failed to create product in Supabase:', err);
+      throw err;
     }
   }
 
@@ -599,13 +630,15 @@ export class ProductService {
       return existing;
     }
 
+    const resolvedCatId = await this.resolveCategoryId(validated.category_id);
+
     try {
       // 1. Update product table
       const { data: prodData, error: prodError } = await this.supabase
         .from('products')
         .update({
           name: validated.name,
-          category_id: validated.category_id || null,
+          category_id: resolvedCatId,
         })
         .eq('id', input.id)
         .select('id, name, category_id, created_at, updated_at')
@@ -685,45 +718,9 @@ export class ProductService {
       if (idx !== -1) inMemoryProducts[idx] = updated;
 
       return updated;
-    } catch {
-      const existing = inMemoryProducts.find((p) => p.id === input.id);
-      if (!existing) {
-        throw new Error(`Product with ID "${input.id}" not found`);
-      }
-
-      const now = new Date().toISOString();
-      existing.name = validated.name;
-      existing.category_id = validated.category_id ?? null;
-      existing.updated_at = now;
-
-      existing.variants = sortVariants(
-        validated.variants.map((v) => {
-          let oldVar = v.id ? existing.variants.find((ov) => ov.id === v.id) : undefined;
-          if (!oldVar) {
-            oldVar = existing.variants.find(
-              (ov) =>
-                ov.size.toLowerCase().trim() === v.size.toLowerCase().trim() ||
-                normalizeSizeKey(ov.size).toLowerCase() === normalizeSizeKey(v.size).toLowerCase()
-            );
-          }
-          const cost = Number(v.cost_price);
-          const price = Number(v.selling_price);
-          return {
-            id: oldVar ? oldVar.id : `var-${existing.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            product_id: existing.id,
-            size: v.size as ProductSizeKey,
-            cost_price: cost,
-            selling_price: price,
-            unit_profit: computeUnitProfit(price, cost),
-            stock_quantity: oldVar ? oldVar.stock_quantity : (v.opening_stock ?? 0),
-            min_stock_level: v.min_stock_level ?? 0,
-            created_at: oldVar ? oldVar.created_at : now,
-            updated_at: now,
-          };
-        })
-      );
-
-      return existing;
+    } catch (err) {
+      console.error('Failed to update product in Supabase:', err);
+      throw err;
     }
   }
 
@@ -731,8 +728,15 @@ export class ProductService {
    * Deletes a product and its associated variants from the active catalog.
    */
   async deleteProduct(id: string): Promise<{ success: boolean; deletedId: string }> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const inMem = inMemoryProducts.find(
+      (p) => p.id === id || (p.name && id.toLowerCase().includes(p.name.toLowerCase()))
+    );
+
     if (!this.supabase) {
-      const idx = inMemoryProducts.findIndex((p) => p.id === id);
+      const idx = inMemoryProducts.findIndex(
+        (p) => p.id === id || (inMem && p.name.toLowerCase() === inMem.name.toLowerCase())
+      );
       if (idx !== -1) {
         inMemoryProducts.splice(idx, 1);
       }
@@ -740,23 +744,86 @@ export class ProductService {
     }
 
     try {
-      const { error } = await this.supabase.from('products').delete().eq('id', id);
-      if (error) {
-        throw new Error(error.message);
+      let targetId = id;
+      let targetName = inMem?.name;
+
+      if (isUuid) {
+        const { data: dbProd } = await this.supabase
+          .from('products')
+          .select('id, name')
+          .eq('id', id)
+          .maybeSingle();
+        if (dbProd) {
+          targetId = dbProd.id;
+          targetName = dbProd.name;
+        }
+      } else if (targetName) {
+        const { data: dbProd } = await this.supabase
+          .from('products')
+          .select('id, name')
+          .ilike('name', targetName.trim())
+          .maybeSingle();
+        if (dbProd) {
+          targetId = dbProd.id;
+          targetName = dbProd.name;
+        }
       }
 
-      const idx = inMemoryProducts.findIndex((p) => p.id === id);
+      // 1. Fetch all variant IDs for this product (if targetId is a valid UUID)
+      const targetIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
+      if (targetIsUuid) {
+        const { data: variants } = await this.supabase
+          .from('product_variants')
+          .select('id')
+          .eq('product_id', targetId);
+
+        const variantIds = (variants || []).map((v) => v.id);
+
+        if (variantIds.length > 0) {
+          // Clean up referencing foreign keys in stock_movements and sale_items
+          await this.supabase
+            .from('stock_movements')
+            .delete()
+            .in('variant_id', variantIds);
+
+          await this.supabase
+            .from('sale_items')
+            .delete()
+            .in('variant_id', variantIds);
+
+          await this.supabase
+            .from('product_variants')
+            .delete()
+            .in('id', variantIds);
+        }
+
+        const { error } = await this.supabase.from('products').delete().eq('id', targetId);
+        if (error) {
+          throw new Error(error.message);
+        }
+      }
+
+      // Also remove from inMemoryProducts
+      const idx = inMemoryProducts.findIndex(
+        (p) =>
+          p.id === id ||
+          p.id === targetId ||
+          (targetName && p.name.toLowerCase() === targetName.toLowerCase())
+      );
       if (idx !== -1) {
         inMemoryProducts.splice(idx, 1);
       }
 
       return { success: true, deletedId: id };
-    } catch {
-      const idx = inMemoryProducts.findIndex((p) => p.id === id);
+    } catch (err) {
+      // In-memory fallback cleanup
+      const idx = inMemoryProducts.findIndex(
+        (p) => p.id === id || (inMem && p.name.toLowerCase() === inMem.name.toLowerCase())
+      );
       if (idx !== -1) {
         inMemoryProducts.splice(idx, 1);
       }
-      return { success: true, deletedId: id };
+      throw err;
     }
   }
 
