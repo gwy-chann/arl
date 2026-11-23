@@ -1,5 +1,4 @@
 import { dispatchGatewaySms, type UnifiedSmsDispatchResult } from './sms-gateway-router.ts';
-import type { PhilSmsSendResult, PhilSmsErrorCode } from './philsms-contracts.ts';
 import type { TextBeeErrorCode, TextBeeSendResult } from './textbee-contracts.ts';
 import type { SmsDispatchPayload } from './sms-contracts.ts';
 
@@ -11,7 +10,7 @@ export type ResilienceErrorCode =
   | 'GATEWAY_ERROR'
   | 'INVALID_INPUT';
 
-export type SmsGateway = 'PHILSMS' | 'TEXTBEE' | string;
+export type SmsGateway = 'TEXTBEE' | string;
 
 export interface CircuitBreakerConfig {
   /** Maximum consecutive failures before tripping from CLOSED to OPEN. Default: 3 */
@@ -209,7 +208,7 @@ export const smsCircuitBreaker = new CircuitBreaker();
  */
 export function isRetryableError(
   errorOrStatus?: unknown,
-  errorCode?: PhilSmsErrorCode | TextBeeErrorCode | string
+  errorCode?: TextBeeErrorCode | string
 ): boolean {
   // Non-retryable HTTP client & configuration errors
   if (typeof errorOrStatus === 'number') {
@@ -227,7 +226,6 @@ export function isRetryableError(
       [
         'GATEWAY_BAD_REQUEST',
         'GATEWAY_AUTH_ERROR',
-        'INSUFFICIENT_CREDITS',
         'INVALID_RECIPIENT_MOBILE',
         'INVALID_INPUT',
         'DEVICE_NOT_FOUND',
@@ -333,7 +331,7 @@ export function sleep(ms: number): Promise<void> {
 /**
  * Non-blocking safe SMS dispatcher wrapper.
  * Integrates:
- * - Multi-gateway support (PHILSMS or TEXTBEE)
+ * - On-premise Android gateway support (TextBee)
  * - Immediate fast-fail when Circuit Breaker is OPEN (< 1ms)
  * - 5,000ms AbortController timeout protection
  * - 1-attempt exponential backoff retry for transient gateway / network errors
@@ -352,7 +350,7 @@ export async function dispatchSmsSafe(
     options?.gateway ||
     process.env.SMS_GATEWAY_PROVIDER ||
     process.env.ACTIVE_SMS_GATEWAY ||
-    'PHILSMS'
+    'TEXTBEE'
   ).toUpperCase();
 
   // 1. Client-side input validation guard
@@ -391,7 +389,7 @@ export async function dispatchSmsSafe(
   }
 
   let lastError: Error | null = null;
-  let lastResult: UnifiedSmsDispatchResult | PhilSmsSendResult | TextBeeSendResult | null = null;
+  let lastResult: UnifiedSmsDispatchResult | TextBeeSendResult | null = null;
   const maxRetries = cfg.maxRetries ?? 1;
   const timeoutMs = cfg.timeoutMs ?? 5000;
   let attemptsMade = 0;

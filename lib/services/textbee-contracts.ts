@@ -47,15 +47,41 @@ export type TextBeeDeviceHealth = z.infer<typeof textBeeDeviceHealthSchema>;
 
 export interface GetTextBeeHealthOptions {
   forceRefresh?: boolean;
+  apiKey?: string;
+  deviceId?: string;
+  deviceName?: string;
+  baseUrl?: string;
 }
 
 export interface TextBeeRawDeviceApiResponse {
+  data?: TextBeeRawDeviceApiResponse;
   id?: string;
   _id?: string;
   name?: string;
   model?: string;
   status?: string;
   online?: boolean;
+  enabled?: boolean;
+  lastHeartbeat?: string;
+  batteryInfo?: {
+    percentage?: number;
+    isCharging?: boolean;
+    lastUpdated?: string;
+  };
+  networkInfo?: {
+    networkType?: string;
+    lastUpdated?: string;
+  };
+  simInfo?: {
+    lastUpdated?: string;
+    sims?: Array<{
+      carrierName?: string;
+      displayName?: string;
+      signalLevel?: number;
+      serviceState?: string;
+      [key: string]: unknown;
+    }>;
+  };
   battery?:
     | {
         percentage?: number;
@@ -73,6 +99,7 @@ export interface TextBeeRawDeviceApiResponse {
       }
     | string;
   networkType?: string;
+  signalStrength?: number;
   lastSeen?: string;
   updatedAt?: string;
   createdAt?: string;
