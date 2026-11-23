@@ -29,10 +29,10 @@ export default function NotFound() {
             Go to Dashboard
           </Link>
           <Link
-            href="/products/categories"
+            href="/products"
             className="w-full py-2.5 px-4 bg-bg-muted hover:bg-border text-text-primary border border-border rounded-lg text-sm font-semibold transition-colors"
           >
-            Product Categories
+            Product Catalog
           </Link>
           <Link
             href="/login"

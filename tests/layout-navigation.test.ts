@@ -41,8 +41,7 @@ describe('Responsive Layout Navigation & Shell Models (ARL-3)', () => {
       );
 
       const products = NAV_ITEMS.find((n) => n.key === 'products');
-      assert.ok(products?.subNav);
-      assert.strictEqual(products.subNav.length, 2);
+      assert.strictEqual(products?.subNav, undefined);
 
       const customers = NAV_ITEMS.find((n) => n.key === 'customers');
       assert.ok(customers?.subNav);

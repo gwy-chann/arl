@@ -67,10 +67,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: 'Products',
     icon: 'tag',
     href: '/products',
-    subNav: [
-      { label: 'Product list', href: '/products', key: 'products' },
-      { label: 'Categories', href: '/products/categories', key: 'products/categories' },
-    ],
   },
   {
     key: 'customers',
