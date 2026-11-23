@@ -1,29 +1,45 @@
 'use client';
 
-import React, { useState, useMemo, useTransition } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { ProductWithVariants } from '@/specs/006-multi-variant-product-catalog/contracts/product-contracts';
 import {
   getSizeLabel,
   formatPeso,
-  getDeleteProductPrompt,
 } from '@/specs/006-multi-variant-product-catalog/contracts/product-contracts';
-import { useConfirm } from '@/components/ui/confirm-provider';
+import type { CategoryWithProductCount } from '@/specs/005-product-category-management/contracts/category-contracts';
 import { useToast } from '@/components/ui/toast-provider';
 import { deleteProductAction } from '@/lib/products/product-actions';
 import { useProductsRealtime } from '@/lib/hooks/use-products-realtime';
 import { notifyProductsUpdated } from '@/lib/products/product-events';
+import { deleteCategoryAction } from '@/lib/categories/category-actions';
+import { DeleteProductModal } from './delete-product-modal';
 
 interface ProductTableProps {
   initialProducts: ProductWithVariants[];
+  initialCategories?: CategoryWithProductCount[];
 }
 
-export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
+export function ProductTable({
+  initialProducts,
+  initialCategories = [],
+}: Readonly<ProductTableProps>) {
+  const router = useRouter();
   const { products, setProducts } = useProductsRealtime(initialProducts);
+
+  const [categories, setCategories] = useState<CategoryWithProductCount[]>(initialCategories);
+  const [prevInitialCategories, setPrevInitialCategories] = useState(initialCategories);
+  if (initialCategories !== prevInitialCategories) {
+    setPrevInitialCategories(initialCategories);
+    setCategories(initialCategories);
+  }
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const confirm = useConfirm();
+  const [productToDelete, setProductToDelete] = useState<ProductWithVariants | null>(null);
+
   const { showToast } = useToast();
-  const [, startTransition] = useTransition();
 
   const totalVariantsCount = useMemo(() => {
     return products.reduce((acc, p) => acc + (p.variants?.length || 0), 0);
@@ -40,9 +56,21 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return products;
 
     return products.filter((p) => {
+      // Category dropdown filtering
+      if (selectedCategoryId === 'uncategorized') {
+        if (p.category_id || p.category_name) return false;
+      } else if (selectedCategoryId !== 'all') {
+        const cat = categories.find((c) => c.id === selectedCategoryId);
+        const matchesCategory =
+          p.category_id === selectedCategoryId ||
+          (cat && p.category_name === cat.name);
+        if (!matchesCategory) return false;
+      }
+
+      // Text search
+      if (!q) return true;
       const matchName = p.name.toLowerCase().includes(q);
       const matchCat = (p.category_name || '').toLowerCase().includes(q);
       const matchSize = p.variants?.some((v) =>
@@ -50,32 +78,135 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
       ) ?? false;
       return matchName || matchCat || matchSize;
     });
-  }, [products, searchQuery]);
+  }, [products, categories, searchQuery, selectedCategoryId]);
 
-  const handleDeleteProduct = async (product: ProductWithVariants) => {
-    const prompt = getDeleteProductPrompt(product.name);
-    const confirmed = await confirm({
-      title: prompt.title,
-      message: prompt.message,
-      confirmLabel: prompt.confirmLabel,
-      variant: prompt.variant,
-    });
+  const handleDeleteProductOnly = async (product: ProductWithVariants) => {
+    try {
+      const result = await deleteProductAction(product.id);
+      if (!result.success) {
+        showToast(result.error || 'Failed to delete product', undefined, 'danger');
+        return;
+      }
 
-    if (!confirmed) {
-      return;
+      // Immediately reflect deletion in state without manual refresh
+      setProducts((prev) =>
+        prev.filter((p) => p.id !== product.id && p.name.toLowerCase() !== product.name.toLowerCase())
+      );
+      setCategories((prev) =>
+        prev.map((c) => {
+          if (
+            c.id === product.category_id ||
+            (product.category_name && c.name.toLowerCase() === product.category_name.toLowerCase())
+          ) {
+            return { ...c, product_count: Math.max(0, c.product_count - 1) };
+          }
+          return c;
+        })
+      );
+      notifyProductsUpdated();
+      showToast('Product deleted');
+      router.refresh();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete product', undefined, 'danger');
     }
+  };
 
-    const result = await deleteProductAction(product.id);
-    if (!result.success) {
-      showToast(result.error || 'Failed to delete product', undefined, 'danger');
-      return;
+  const handleDeleteCategoryOnly = async (
+    categoryName: string,
+    categoryId?: string | null
+  ) => {
+    try {
+      const targetCategory = categories.find(
+        (c) => (categoryId && c.id === categoryId) || c.name.toLowerCase() === categoryName.toLowerCase()
+      );
+      const idToDelete = targetCategory?.id || categoryId;
+
+      if (!idToDelete) {
+        showToast('Category could not be identified', undefined, 'danger');
+        return;
+      }
+
+      const result = await deleteCategoryAction(idToDelete);
+      if (!result.success) {
+        showToast(result.error || 'Failed to delete category', undefined, 'danger');
+        return;
+      }
+
+      // Immediately unlink products in state without manual refresh
+      setCategories((prev) => prev.filter((c) => c.id !== idToDelete));
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.category_id === idToDelete || p.category_name === categoryName) {
+            return { ...p, category_id: null, category_name: null };
+          }
+          return p;
+        })
+      );
+      if (selectedCategoryId === idToDelete) {
+        setSelectedCategoryId('all');
+      }
+      notifyProductsUpdated();
+      showToast('Category deleted');
+      router.refresh();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete category', undefined, 'danger');
     }
+  };
 
-    startTransition(() => {
-      setProducts((prev) => prev.filter((p) => p.id !== product.id));
-    });
-    notifyProductsUpdated();
-    showToast('Product deleted');
+  const handleDeleteBoth = async (product: ProductWithVariants) => {
+    try {
+      // 1. Delete product
+      const productResult = await deleteProductAction(product.id);
+      if (!productResult.success) {
+        showToast(productResult.error || 'Failed to delete product', undefined, 'danger');
+        return;
+      }
+
+      // 2. Delete category
+      const targetCategory = categories.find(
+        (c) =>
+          (product.category_id && c.id === product.category_id) ||
+          (product.category_name && c.name.toLowerCase() === product.category_name.toLowerCase())
+      );
+      const catIdToDelete = targetCategory?.id || product.category_id;
+
+      if (catIdToDelete) {
+        const catResult = await deleteCategoryAction(catIdToDelete);
+        if (!catResult.success) {
+          showToast(catResult.error || 'Failed to delete category', undefined, 'danger');
+          // Still remove deleted product from state
+          setProducts((prev) => prev.filter((p) => p.id !== product.id));
+          notifyProductsUpdated();
+          return;
+        }
+      }
+
+      // Immediately reflect both deletions in state
+      setProducts((prev) =>
+        prev
+          .filter((p) => p.id !== product.id && p.name.toLowerCase() !== product.name.toLowerCase())
+          .map((p) => {
+            if (
+              (catIdToDelete && p.category_id === catIdToDelete) ||
+              (product.category_name && p.category_name?.toLowerCase() === product.category_name.toLowerCase())
+            ) {
+              return { ...p, category_id: null, category_name: null };
+            }
+            return p;
+          })
+      );
+      if (catIdToDelete) {
+        setCategories((prev) => prev.filter((c) => c.id !== catIdToDelete));
+        if (selectedCategoryId === catIdToDelete) {
+          setSelectedCategoryId('all');
+        }
+      }
+      notifyProductsUpdated();
+      showToast('Product and category deleted');
+      router.refresh();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete product and category', undefined, 'danger');
+    }
   };
 
   return (
@@ -114,9 +245,9 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
 
       {/* Main Table Card */}
       <div className="bg-bg-surface border border-border rounded-(--r) shadow-xs overflow-hidden">
-        {/* Toolbar with Search Box */}
-        <div className="p-3 bg-bg-base border-b border-border flex items-center justify-between">
-          <div className="relative w-full max-w-sm">
+        {/* Toolbar with Search Box & Category Filter Dropdown */}
+        <div className="p-3 bg-bg-base border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative w-full sm:max-w-xs">
             <input
               type="text"
               value={searchQuery}
@@ -129,12 +260,46 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-[14px] leading-none"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-[14px] leading-none cursor-pointer"
                 aria-label="Clear search"
               >
                 ✕
               </button>
             )}
+          </div>
+
+          {/* Clean Category Filter Dropdown */}
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="category-filter-select"
+              className="text-[13px] font-medium text-text-muted whitespace-nowrap"
+            >
+              Category:
+            </label>
+            <select
+              id="category-filter-select"
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+              className="bg-bg-surface border border-border text-text-primary text-[13.5px] font-medium rounded-(--r) px-3 py-1.5 outline-none focus:border-border-focus transition-colors cursor-pointer min-w-44"
+              aria-label="Filter products by category"
+            >
+              <option value="all">All categories ({products.length})</option>
+              {categories.map((c) => {
+                const count = products.filter(
+                  (p) => p.category_id === c.id || p.category_name === c.name
+                ).length;
+                return (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({count})
+                  </option>
+                );
+              })}
+              <option value="uncategorized">
+                Uncategorized (
+                {products.filter((p) => !p.category_id && !p.category_name).length}
+                )
+              </option>
+            </select>
           </div>
         </div>
 
@@ -254,8 +419,9 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                             </Link>
                             <button
                               type="button"
-                              onClick={() => handleDeleteProduct(p)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-danger/10 hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
+                              onClick={() => setProductToDelete(p)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-danger-light hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
+                              data-testid={`delete-btn-${p.id}`}
                             >
                               <svg
                                 className="w-3.5 h-3.5 stroke-current"
@@ -346,8 +512,9 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                             </Link>
                             <button
                               type="button"
-                              onClick={() => handleDeleteProduct(p)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-danger/10 hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
+                              onClick={() => setProductToDelete(p)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium rounded-(--r) bg-danger-light hover:bg-danger/20 text-danger border border-danger-border/30 transition-colors cursor-pointer"
+                              data-testid={`delete-btn-${p.id}`}
                             >
                               <svg
                                 className="w-3.5 h-3.5 stroke-current"
@@ -359,7 +526,7 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
                                 aria-hidden="true"
                               >
                                 <polyline points="3 6 5 6 21 6" />
-                                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                               </svg>
                               Delete
                             </button>
@@ -374,6 +541,25 @@ export function ProductTable({ initialProducts }: Readonly<ProductTableProps>) {
           </table>
         </div>
       </div>
+
+      {/* Delete Product & Category Validation Dialog */}
+      <DeleteProductModal
+        isOpen={Boolean(productToDelete)}
+        product={productToDelete}
+        categoryProductCount={
+          productToDelete
+            ? products.filter(
+                (p) =>
+                  p.category_id === productToDelete.category_id ||
+                  p.category_name === productToDelete.category_name
+              ).length
+            : 0
+        }
+        onClose={() => setProductToDelete(null)}
+        onDeleteProductOnly={handleDeleteProductOnly}
+        onDeleteCategoryOnly={handleDeleteCategoryOnly}
+        onDeleteBoth={handleDeleteBoth}
+      />
     </div>
   );
 }
