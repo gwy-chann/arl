@@ -58,6 +58,10 @@ export async function createProductAction(input: CreateProductInput): Promise<{
     const product = await service.createProduct(input);
     revalidatePath('/products');
     revalidatePath('/products/categories');
+    revalidatePath('/inventory');
+    revalidatePath('/inventory/low');
+    revalidatePath('/sales');
+    revalidatePath('/sales/new');
     return { success: true, product };
   } catch (err: unknown) {
     return {
@@ -82,6 +86,10 @@ export async function updateProductAction(input: UpdateProductInput): Promise<{
     revalidatePath('/products');
     revalidatePath(`/products/${input.id}/edit`);
     revalidatePath('/products/categories');
+    revalidatePath('/inventory');
+    revalidatePath('/inventory/low');
+    revalidatePath('/sales');
+    revalidatePath('/sales/new');
     return { success: true, product };
   } catch (err: unknown) {
     return {
@@ -105,6 +113,10 @@ export async function deleteProductAction(id: string): Promise<{
     const result = await service.deleteProduct(id);
     revalidatePath('/products');
     revalidatePath('/products/categories');
+    revalidatePath('/inventory');
+    revalidatePath('/inventory/low');
+    revalidatePath('/sales');
+    revalidatePath('/sales/new');
     return { success: true, deletedId: result.deletedId };
   } catch (err: unknown) {
     return {
