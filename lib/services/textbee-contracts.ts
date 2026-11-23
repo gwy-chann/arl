@@ -107,6 +107,8 @@ export type TextBeeSendOptions = z.infer<typeof textBeeSendOptionsSchema> & {
 export const textBeeSendResultSchema = z.object({
   success: z.boolean(),
   messageId: z.string().optional(),
+  recipient: z.string(),
+  gateway: z.literal('TEXTBEE'),
   errorMessage: z.string().optional(),
   errorCode: textBeeErrorCodeSchema.optional(),
   rawResponse: z.unknown().optional(),
@@ -114,3 +116,10 @@ export const textBeeSendResultSchema = z.object({
 
 export type TextBeeSendResult = z.infer<typeof textBeeSendResultSchema>;
 
+export interface TextBeeMockRecord {
+  recipient: string;
+  message: string;
+  timestamp: string;
+  messageId: string;
+  deviceId?: string;
+}
